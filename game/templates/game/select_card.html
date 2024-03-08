@@ -1,0 +1,61 @@
+{% load static%}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pick Card</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha384-pgwBm0O4FcQUc2C5CjXul7Z/n0I5XsIULo2EpfQu1RWy2+fP4wLSgTysv2hZvhVO" crossorigin="anonymous">
+  <link rel="stylesheet" href="{% static 'game/css/style.css' %}">
+  <script src="{% static 'game/js/jquery-3.7.1.min.js' %}"></script>
+</head>
+<body>
+    <header>
+        <div>
+            
+        </div>
+        <div>
+            <i class="fas fa-wallet"></i> <span id="user-wallet">$100</span>
+        </div>
+        <div id="gameid" style="display:none;">{{gameid}}</div>
+      </header>
+    <div class="container">
+        <table>
+        <thead>
+            <th>Game</th>
+            <th>Satke</th>
+            <th>Players</th>
+            <th>Win</th>
+        </thead>
+        <tbody>
+            <tr id="game-stat">
+                <td>1</td>
+                <td>10</td>
+                <td>5</td>
+                <td>50</td>
+            </tr>
+        </tbody>
+        </table>
+        <div class="row" id="buttons-container">
+          <!-- Buttons will be inserted here -->
+        </div>
+        <div id="bingo-table-container">
+
+        </div>
+        <div class="row mt-3">
+          <div class="col-4 text-center">
+            <button id="prev-btn" class="btn custom-btn-action">Previous</button>
+          </div>
+            <div class="col-4 text-center">
+              <button id="play-btn" class="btn custom-btn-action">Play</button>
+            </div>
+          <div class="col-4 text-center">
+            <button id="next-btn" class="btn custom-btn-action">Next</button>
+          </div>
+        </div>
+      </div>
+
+  <script src="{% static 'game/js/script.js' %}"></script>
+  
+</body>
+</html>

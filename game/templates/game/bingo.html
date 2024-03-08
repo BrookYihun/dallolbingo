@@ -1,0 +1,65 @@
+{% load static%}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bingo Card</title>
+  <link rel="stylesheet" href="{% static 'game/css/style.css' %}">
+  <script src="{% static 'game/js/jquery-3.7.1.min.js' %}"></script>
+</head>
+<body>
+  <div class="secound-container">
+    <div id="gameid" style="display:none;">{{gameid}}</div>
+    <div id="cardid" style="display:none;">{{cardid}}</div>
+    <table class="stat">
+      <thead>
+          <th>Game</th>
+          <th>Satke</th>
+          <th>Players</th>
+          <th>Win</th>
+      </thead>
+      <tbody>
+          <tr id="game-stat">
+              <td>{{gameid}}</td>
+              <td>10</td>
+              <td>5</td>
+              <td>50</td>
+          </tr>
+      </tbody>
+      </table>
+    <div class="bingo-animation">
+        <div id="last-called">
+
+        </div>
+        <div id="called-numbers">
+          <!-- Called numbers will be displayed here -->
+        </div>
+      </div>
+    <div class="bingo-container">
+          <div class="table-container">
+            <table>
+              <tr>
+                <th>B</th>
+                <th>I</th>
+                <th>N</th>
+                <th>G</th>
+                <th>O</th>
+              </tr>
+              {% for row in card %}
+                <tr>
+                  {% for column in row %}
+                    <td class="bingo-number{% if forloop.parentloop.counter0 == 2 and forloop.counter0 == 2 %} highlighted {% endif %}">{% if forloop.parentloop.counter0 == 2 and forloop.counter0 == 2 %}★{% else %}{{ column }}{% endif %}</td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}    
+            </table>
+          </div>
+      </div>
+      <div class="bingo-button">
+        <button id="start-game">Start</button>
+        <button id="bingoButton">Bingo !</button>
+      </div>
+  </div>
+  <script src="{% static 'game/js/script2.js' %}"></script>
+</body>
+</html>

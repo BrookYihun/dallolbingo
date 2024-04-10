@@ -102,7 +102,7 @@ class GameConsumer(WebsocketConsumer):
                         'random_number': num
                     }
                 )
-                self.called_numbers.append(num)
+                async_to_sync(self.called_numbers.append(num))
                 time.sleep(5)
                                
     

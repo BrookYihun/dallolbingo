@@ -3,11 +3,11 @@ import json
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
-from account.models import Account
+
 from account.views import custom_csrf_protect
-from game.models import Card, Game
+
 import random
-from django.db.models import Q
+
 
 # Create your views here.
 @login_required
@@ -15,6 +15,8 @@ def index(request):
     if request.method == 'POST':
         stake = int(request.POST.get("stake"))
         user = request.user
+        from account.models import Account
+        from game.models import Game
         acc = Account.objects.get(user=user)
         if int(acc.wallet) > stake:
             game = Game.objects.filter(stake=stake,played="Created").order_by('-id').last()
@@ -40,7 +42,10 @@ def telIndex(request):
     if request.method == 'POST':
         stake = int(request.POST.get("stake"))
         user = request.user
+        from account.models import Account
         acc = Account.objects.get(user=user)
+        from django.db.models import Q
+        from game.models import Game
         if int(acc.wallet) > stake:
             game = Game.objects.filter(Q(stake=stake) & (Q(played="Created") | Q(played="Started"))).order_by('-id').last()
             if game is not None:
@@ -58,7 +63,9 @@ def telIndex(request):
 
 @login_required
 def pick_card(request,gameid):
+    from game.models import Game
     game = Game.objects.get(id=int(gameid))
+    from account.models import Account
     acc = Account.objects.get(user=request.user)
     if game.played == 'Playing' or game.played == 'Close':
         return redirect(index)
@@ -98,6 +105,7 @@ def pick_card(request,gameid):
 @login_required
 def get_selected_numbers(request):
     gameid = request.GET.get('paramName', '')
+    from game.models import Game
     game = Game.objects.get(id=int(gameid))
     cards = json.loads(game.playerCard)
     # Extract only the card numbers
@@ -134,6 +142,7 @@ def get_selected_numbers(request):
 @login_required
 def get_bingo_stat(request):
     gameid = request.GET.get('paramName', '')
+    from game.models import Game
     game = Game.objects.get(id=int(gameid))
 
     # Prepare game data
@@ -155,6 +164,7 @@ def get_bingo_stat(request):
 
 @login_required
 def get_bingo_card(request):
+    from game.models import Card
     cardnumber = request.GET.get('paramName', '')
     card = Card.objects.get(id=int(cardnumber))
     card_numbers = json.loads(card.numbers)
@@ -163,7 +173,9 @@ def get_bingo_card(request):
 
 @login_required
 def bingo(request,cardid,gameid):
+    from game.models import Card, Game
     game = Game.objects.get(id=int(gameid))
+    from account.models import Account
     if game:
         acc = Account.objects.get(user=request.user)
         if game.played == 'Playing' or game.played == 'Close':

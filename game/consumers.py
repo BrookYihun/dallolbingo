@@ -3,11 +3,9 @@ import threading
 import time
 from channels.generic.websocket import WebsocketConsumer
 import json
-from django.db import models
 from asgiref.sync import sync_to_async, async_to_sync
-from account.models import Account
-from django.contrib.auth.models import User
-from game.models import Card, Game
+
+
 
 active_games = {}
 
@@ -26,6 +24,7 @@ class GameConsumer(WebsocketConsumer):
             self.channel_name
         )
         self.accept()
+        from game.models import Game
         game = Game.objects.get(id=int(self.game_id))
         self.game_random_numbers = json.loads(game.random_numbers)
         if game.played == "Started":
@@ -79,6 +78,7 @@ class GameConsumer(WebsocketConsumer):
             # Broadcast message to all connected players
     
     def send_random_numbers_periodically(self):
+        from game.models import Game
         game = Game.objects.get(id=self.game_id)
         game.played = "Started"
         game.started_at = timezone.now()
@@ -153,6 +153,7 @@ class GameConsumer(WebsocketConsumer):
         }))
     
     def checkBingo(self,card_id):
+        from game.models import Card, Game
         game = Game.objects.get(id=int(self.game_id))
 
         if not self.called_numbers :
@@ -174,8 +175,10 @@ class GameConsumer(WebsocketConsumer):
             numbers = json.loads(card.numbers)
             winning_numbers = self.has_bingo(numbers, called_numbers_list)
             if len(winning_numbers)>0:
+                from django.contrib.auth.models import User
                 result.append({'card_name': card.id, 'message': 'Bingo', 'card': numbers, 'winning_numbers':winning_numbers})
                 user = User.objects.get(id=player_id)
+                from account.models import Account
                 acc = Account.objects.get(user=user)
                 acc.wallet = acc.wallet + game.winner_price
                 acc.save()
@@ -275,6 +278,7 @@ class GameConsumer(WebsocketConsumer):
         return winning_numbers
 
     def block(self,card_id):
+        from game.models import Game
         last_game = Game.objects.get(id=self.game_id)
         players = json.loads(last_game.playerCard)
         updated_list = [item for item in players if int(item['card']) != card_id]

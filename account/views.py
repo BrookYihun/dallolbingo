@@ -2,11 +2,8 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import User
 from django.contrib import messages
 import base64
-
-from account.models import Account
 
 # Create your views here.
 def login_view(request):
@@ -54,6 +51,8 @@ def register_view(request):
 
         if username and email and password:
             # Create new user instance
+            from django.contrib.auth.models import User
+
             new_user = User.objects.create_user(username=username, email=email, password=password)
             
             # Optionally, you can perform additional actions like login the user after signup
@@ -77,6 +76,8 @@ def register_tel_view(request):
 
     if username and email and password:
         # Create new user instance
+        from django.contrib.auth.models import User
+
         new_user = User.objects.create_user(username=username, email=email, password=password)
         
         # Optionally, you can perform additional actions like login the user after signup

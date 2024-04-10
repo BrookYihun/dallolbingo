@@ -18,10 +18,10 @@ from game import routing
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dallolbingo.settings')
 
 application = ProtocolTypeRouter({
-    'http':get_asgi_application(),
-    'websocket':AuthMiddlewareStack(
+    'http': get_asgi_application(),
+    'websocket': AuthMiddlewareStack(
         URLRouter(
             routing.websocket_urlpatterns
         )
-    )
+    ),
 })

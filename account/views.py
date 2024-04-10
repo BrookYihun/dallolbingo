@@ -89,7 +89,7 @@ def register_tel_view(request):
             input_string = username+":"+password
             encoded_bytes = base64.b64encode(input_string.encode("utf-8"))
             responseJson = {
-                'token':encoded_bytes
+                'token':str(encoded_bytes)
             }
             return JsonResponse(responseJson)# Redirect to the user's dashboard
     responseJson = {

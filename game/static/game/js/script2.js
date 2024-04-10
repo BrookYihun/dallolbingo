@@ -65,7 +65,7 @@ function connetToGame() {
           time = Math.floor(time);
           if (time<0){
             socket.close();
-            window.location.href = serverUrl;
+            window.location.href = 'http://5.75.175.113/';
           }
           timerInterval = setInterval(updateTimer, 1000);
         }
@@ -148,7 +148,7 @@ function generateResultHTML(cardResult) {
 
     socket.close();
     setTimeout(function() {
-      window.location.href = serverUrl;
+      window.location.href = 'http://5.75.175.113/';
       // Code to execute after 10 seconds
   }, 10000);
 
@@ -192,7 +192,7 @@ function generateResultHTML(cardResult) {
 
       socket.close();
       setTimeout(function() {
-        window.location.href = serverUrl;
+        window.location.href = 'http://5.75.175.113/';
         // Code to execute after 10 seconds
     }, 10000);
   }

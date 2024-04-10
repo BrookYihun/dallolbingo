@@ -11,7 +11,6 @@ def login_view(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
-
         if user is not None and user.is_authenticated:
             login(request, user)
             return redirect('index')  # Redirect to the user's dashboard
@@ -25,7 +24,6 @@ def login_view(request):
 
 def login_tel_view(request,data):
     decoded_custom_token = base64.b64decode(data)
-
     parts = decoded_custom_token.split(':')
 
     if len(parts)!=2:
@@ -78,6 +76,16 @@ def register_tel_view(request):
         # Create new user instance
         from django.contrib.auth.models import User
 
+        user = authenticate(request, username=username, password=password)
+        if user:
+            login(request, user)
+            input_string = username+":"+password
+            encoded_bytes = base64.b64encode(input_string.encode("utf-8"))
+            responseJson = {
+                'token': str(encoded_bytes)
+            }
+            return JsonResponse(responseJson)
+
         new_user = User.objects.create_user(username=username, email=email, password=password)
         
         # Optionally, you can perform additional actions like login the user after signup
@@ -89,7 +97,7 @@ def register_tel_view(request):
             input_string = username+":"+password
             encoded_bytes = base64.b64encode(input_string.encode("utf-8"))
             responseJson = {
-                'token':str(encoded_bytes)
+                'token': str(encoded_bytes)
             }
             return JsonResponse(responseJson)# Redirect to the user's dashboard
     responseJson = {

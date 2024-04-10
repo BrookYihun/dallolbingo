@@ -4,8 +4,10 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 from account.models import Account
+from account.views import custom_csrf_protect
 from game.models import Card, Game
 import random
+from django.db.models import Q
 
 # Create your views here.
 @login_required
@@ -15,12 +17,38 @@ def index(request):
         user = request.user
         acc = Account.objects.get(user=user)
         if int(acc.wallet) > stake:
-            game = Game.objects.filter(stake=stake,played = "Created" ).order_by('-id').last()
+            game = Game.objects.filter(stake=stake,played="Created").order_by('-id').last()
+            game2 = Game.objects.filter(stake=stake,played="Started").order_by('-id').last()
+            if game2 is not None:
+                elapsed_time = (timezone.now() - game2.started_at).total_seconds()
+                if elapsed_time < 60:
+                    return redirect (pick_card,game2.id)
+            if game is not None:
+                return redirect (pick_card,game.id)
+            new_game = Game.objects.create()
+            new_game.stake = int(stake)
+            new_game.save_random_numbers(generate_random_numbers())
+            new_game.save()
+            return redirect (pick_card,new_game.id)
+        else:
+          return render (request,'game/index.html')
+
+    return render (request,'game/index.html')
+
+@custom_csrf_protect
+def telIndex(request):
+    if request.method == 'POST':
+        stake = int(request.POST.get("stake"))
+        user = request.user
+        acc = Account.objects.get(user=user)
+        if int(acc.wallet) > stake:
+            game = Game.objects.filter(Q(stake=stake) & (Q(played="Created") | Q(played="Started"))).order_by('-id').last()
             if game is not None:
                 return redirect (pick_card,game.id)
             else:
                 new_game = Game.objects.create()
                 new_game.stake = int(stake)
+                new_game.save_random_numbers(generate_random_numbers())
                 new_game.save()
                 return redirect (pick_card,new_game.id)
         else:
@@ -30,17 +58,25 @@ def index(request):
 
 @login_required
 def pick_card(request,gameid):
+    game = Game.objects.get(id=int(gameid))
+    acc = Account.objects.get(user=request.user)
+    if game.played == 'Playing' or game.played == 'Close':
+        return redirect(index)
+    players = json.loads(game.playerCard)
+    if request.user.id in [player_card['user'] for player_card in players]:
+        card_id = next(player['card'] for player in players if player['user'] == request.user.id)
+        return redirect(bingo,card_id,game.id)
     if request.method == 'POST':
         try:
             cardid = int(request.POST.get("selected_number"))
-            game = Game.objects.get(id=gameid)
             time = timezone.now()
             formatted_time = time.strftime('%Y-%m-%d %H:%M:%S')
-            players = json.loads(game.playerCard)
             if cardid not in [player_card['card'] for player_card in players]:
-                new_player = {'time': formatted_time, 'card': cardid}
+                new_player = {'time': formatted_time, 'card': cardid,'user':request.user.id}
                 players.append(new_player)
                 game.numberofplayers = game.numberofplayers + 1
+                acc.wallet = float(acc.wallet) - float(game.stake)
+                acc.save()
             else:
                 return render (request,'game/select_card.html',{'gameid':gameid,'message':"Card Taken Pick Again"})
 
@@ -57,8 +93,7 @@ def pick_card(request,gameid):
             return redirect (bingo,cardid,game.id)
         except ValueError:
             return HttpResponse('Error')
-        
-    return render (request,'game/select_card.html',{'gameid':gameid})
+    return render (request,'game/select_card.html',{'gameid':gameid,'acc':acc},)
 
 @login_required
 def get_selected_numbers(request):
@@ -73,8 +108,18 @@ def get_selected_numbers(request):
         "game_id": game.id,
         "stake": str(game.stake),  # Convert Decimal to string
         "number_of_players": game.numberofplayers,
-        "winner_price": str(game.winner_price)  # Convert Decimal to string
+        "winner_price": str(game.winner_price),
+        "time_started":str(0)   # Convert Decimal to string
     }
+
+    if game.played == "Started":
+        game_data = {
+            "game_id": game.id,
+            "stake": str(game.stake),  # Convert Decimal to string
+            "number_of_players": game.numberofplayers,
+            "winner_price": str(game.winner_price),
+            "time_started":str(game.started_at)  # Convert Decimal to string
+        }
 
     # Convert game data to JSON format using DjangoJSONEncoder
     json_game_data = json.dumps(game_data)
@@ -118,29 +163,29 @@ def get_bingo_card(request):
 
 @login_required
 def bingo(request,cardid,gameid):
-    card = Card.objects.get(id=cardid)
-    card_numbers = json.loads(card.numbers)
-    return render (request,'game/bingo.html',{"card":card_numbers,"gameid":gameid,"cardid":cardid})
-
-@login_required
-def get_random_numbers(request):
-    gameid = request.GET.get('paramName', '')
     game = Game.objects.get(id=int(gameid))
-    if game.random_numbers == [0]:
-        # Generate and save all random numbers if the table is empty
-        random_numbers = generate_random_numbers()  # Generate 10 random numbers
-        game.save_random_numbers(random_numbers)
-        game.save()
+    if game:
+        acc = Account.objects.get(user=request.user)
+        if game.played == 'Playing' or game.played == 'Close':
+            return redirect(index)
+        players = json.loads(game.playerCard)
+        if not request.user.id in [player_card['user'] for player_card in players]:
+            return redirect(index)
+        if not cardid in [player_card['card'] for player_card in players]:
+            if request.user.id in [player_card['user'] for player_card in players]:
+                card_id_h = None
+                for player in players:
+                    if player['user']==request.user.id:
+                        card_id_h = player['card']
+                if card_id_h:
+                    return redirect(bingo,card_id_h,gameid)
+            return redirect(index)
+        card = Card.objects.get(id=cardid)
+        card_numbers = json.loads(card.numbers)
+        return render (request,'game/bingo.html',{"card":card_numbers,"gameid":gameid,"cardid":cardid,'acc':acc})
+    return redirect(index)
 
-    if not game.total_calls == 75:
-        random_numbers_list = json.loads(game.random_numbers)
-        next_number = random_numbers_list[game.total_calls]
-        game.total_calls += 1
-        game.save()
-        return JsonResponse({'random_number': next_number})
-    else:
-        return JsonResponse({'message': 'No more random numbers available.'}, status=404)
-    
+
 def generate_random_numbers():
     # Generate a list of numbers from 1 to 75
     numbers = list(range(1, 76))
@@ -150,120 +195,4 @@ def generate_random_numbers():
     
     return numbers
 
-@login_required
-def checkBingo(request):
-    card_id = request.GET.get('card', '')
-    gameid = request.GET.get('game', '')
-    game = Game.objects.get(id=int(gameid))
-    called_numbers = json.loads(game.random_numbers)
-
-    if not called_numbers:
-        context = {'called': called_numbers, 'message': 'No numbers called yet'}
-        return render(request, 'game/result.html', context)
-
-    result = []
-    players = json.loads(game.playerCard)
-    player_cards = [entry['card'] for entry in players]
-    card_found = int(card_id) in player_cards
-    called_numbers_list = called_numbers
-    game.total_calls = len(called_numbers_list)
-    game.save()
-
-    if card_found:
-        card = Card.objects.get(id=card_id)
-        numbers = json.loads(card.numbers)
-        winning_columns, winning_rows, winning_diagonals,corner_count,winning_numbers = has_bingo(numbers, called_numbers)
-        if len(winning_numbers)>0:
-            result.append({'card_name': card.id, 'message': 'Bingo', 'winning_card': numbers, 'winning_rows': winning_rows, 'remaining_numbers': called_numbers_list,'winning_numbers':winning_numbers})
-        elif winning_rows!=0:
-            result.append({'card_name': card.id, 'message': 'Bingo', 'winning_card': numbers, 'winning_rows': winning_rows, 'remaining_numbers': called_numbers_list})
-        elif winning_diagonals!=0:
-            result.append({'card_name': card.id, 'message': 'Bingo', 'winning_card': numbers, 'winning_diagonals': winning_diagonals, 'remaining_numbers': called_numbers_list})
-        elif winning_columns!=0:
-            result.append({'card_name': card.id, 'message': 'Bingo', 'winning_card': numbers, 'winning_columns': winning_columns, 'remaining_numbers': called_numbers_list})
-        elif corner_count==4:
-            result.append({'card_name': card.id, 'message': 'Bingo', 'winning_card': numbers, 'winning_corners': corner_count, 'remaining_numbers': called_numbers_list})
-        else:
-            result.append({'card_name': card.id, 'message': 'No Bingo','card':numbers})
-    else:
-        result.append({'card_name': card_id, 'message': 'Not a Player'})
-
-    context = {'called': called_numbers_list, 'result': result,'game':gameid}
-    return  JsonResponse({'random_number': 1})
-
-def has_bingo(card, called_numbers):
-    winning_rows = 0
-    winning_diagonals = 0
-    winning_columns = 0
-    called_numbers_list = list(called_numbers)
-    corner_count = 0
-    winning_numbers = []
-
-    # Check diagonals
-    diagonal2 = [card[i][i] for i in range(len(card))]
-    diagonal1 = [card[i][len(card) - 1 - i] for i in range(len(card))]
-    if all(number in called_numbers for number in diagonal2):
-        winning_diagonals = 2
-        winning_numbers.append(1)
-        winning_numbers.append(7)
-        winning_numbers.append(13)
-        winning_numbers.append(19)
-        winning_numbers.append(25)
-        break_index = max([called_numbers_list.index(number) for number in diagonal2 if number in called_numbers_list]) + 1
-    if all(number in called_numbers for number in diagonal1):
-        winning_diagonals = 1
-        winning_numbers.append(5)
-        winning_numbers.append(9)
-        winning_numbers.append(13)
-        winning_numbers.append(17)
-        winning_numbers.append(21)
-        break_index = max([called_numbers_list.index(number) for number in diagonal1 if number in called_numbers_list]) + 1
-
-    # Check rows
-    for row_index, row in enumerate(card):
-        if all(number in called_numbers for number in row):
-            winning_rows = row_index + 1
-            winning_numbers.append((row_index*5)+1)
-            winning_numbers.append((row_index*5)+2)
-            winning_numbers.append((row_index*5)+3)
-            winning_numbers.append((row_index*5)+4)
-            winning_numbers.append((row_index*5)+5)
-            break_index = max([called_numbers_list.index(number) for number in row if number in called_numbers_list]) + 1
-
-    # Check columns
-    for col in range(len(card[0])):
-        if all(card[row][col] in called_numbers for row in range(len(card))):
-            winning_columns = col + 1
-            winning_numbers.append(winning_columns)
-            winning_numbers.append(winning_columns+5)
-            winning_numbers.append(winning_columns+10)
-            winning_numbers.append(winning_columns+15)
-            winning_numbers.append(winning_columns+20)
-            column = [card[row][col] for row in range(len(card))]
-            max_index = max([called_numbers_list.index(number) for number in column if number in called_numbers_list])
-            break_index = max_index + 1 if max_index >= 0 else 0
-
-    # Check the top-left corner (1, 1)
-    if card[0][0] in called_numbers:
-        corner_count += 1
-
-    # Check the top-right corner (1, 5)
-    if card[0][4] in called_numbers:
-        corner_count += 1
-
-    # Check the bottom-left corner (5, 1)
-    if card[4][0] in called_numbers:
-        corner_count += 1
-
-    # Check the bottom-right corner (5, 5)
-    if card[4][4] in called_numbers:
-        corner_count += 1
-
-    if corner_count == 4:
-        winning_numbers.append(1)
-        winning_numbers.append(5)
-        winning_numbers.append(21)
-        winning_numbers.append(25)
-
-    return winning_columns, winning_rows, winning_diagonals,corner_count,winning_numbers
 

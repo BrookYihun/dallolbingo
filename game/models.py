@@ -12,6 +12,7 @@ class Game(models.Model):
     numberofplayers = models.IntegerField(default=0)
     playerCard = models.JSONField(default="[]")
     created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(auto_now_add=True)
     played = models.CharField(max_length=50,default='Created')
     total_calls = models.IntegerField(default=0)
     called_numbers = models.JSONField(default=[0])
@@ -24,4 +25,8 @@ class Game(models.Model):
     
     def save_random_numbers(self, numbers):
         self.random_numbers = json.dumps(numbers)
+        self.save()
+    
+    def save_called_numbers(self, numbers):
+        self.called_numbers = json.dumps(numbers)
         self.save()

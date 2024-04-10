@@ -4,10 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bingo Card</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam&display=swap">
   <link rel="stylesheet" href="{% static 'game/css/style.css' %}">
   <script src="{% static 'game/js/jquery-3.7.1.min.js' %}"></script>
 </head>
 <body>
+  <header class="fixed-header">
+    <div class="wallet">
+      <i class="fa-solid fa-wallet"></i>
+      <span class="amount">{{acc.wallet}}</span>
+    </div>
+    <div>
+      <span>Dallol Bingo</span>
+    </div>
+    <div class="timer">
+      <i class="fa-regular fa-clock"></i>
+      <span class="amount" id="timer">60</span>
+    </div>
+  </header>
   <div class="secound-container">
     <div id="gameid" style="display:none;">{{gameid}}</div>
     <div id="cardid" style="display:none;">{{cardid}}</div>
@@ -36,30 +50,38 @@
         </div>
       </div>
     <div class="bingo-container">
-          <div class="table-container">
-            <table>
-              <tr>
-                <th>B</th>
-                <th>I</th>
-                <th>N</th>
-                <th>G</th>
-                <th>O</th>
-              </tr>
-              {% for row in card %}
-                <tr>
-                  {% for column in row %}
-                    <td class="bingo-number{% if forloop.parentloop.counter0 == 2 and forloop.counter0 == 2 %} highlighted {% endif %}">{% if forloop.parentloop.counter0 == 2 and forloop.counter0 == 2 %}★{% else %}{{ column }}{% endif %}</td>
-                  {% endfor %}
-                </tr>
-              {% endfor %}    
-            </table>
-          </div>
+      <div class="table-container">
+        <table>
+          <tr>
+            <th>B</th>
+            <th>I</th>     
+            <th>N</th>
+            <th>G</th>
+            <th>O</th>
+          </tr>
+          {% for row in card %}
+            <tr>
+              {% for column in row %}
+                <td class="bingo-number{% if forloop.parentloop.counter0 == 2 and forloop.counter0 == 2 %} highlighted {% endif %}">{% if forloop.parentloop.counter0 == 2 and forloop.counter0 == 2 %}★{% else %}{{ column }}{% endif %}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}    
+        </table>
       </div>
-      <div class="bingo-button">
-        <button id="start-game">Start</button>
-        <button id="bingoButton">Bingo !</button>
-      </div>
+    </div>
+    <div class="bingo-button">
+      <button class="mybutton" id="start-game">Start</button>
+      <button class="mybutton" id="bingoButton">Bingo !</button>
+    </div>
+    <div class="blur-background" id="blur-background">
+    
+    </div>
+    <footer>
+      <p>&copy; 2024 Dallol Technologies</p>
+    </footer>
   </div>
+
   <script src="{% static 'game/js/script2.js' %}"></script>
+  <script src="https://kit.fontawesome.com/24a72a6d2d.js" crossorigin="anonymous"></script>
 </body>
 </html>

@@ -2,10 +2,165 @@ const gamediv = document.getElementById("gameid");
 const gameid = gamediv.innerText;
 const carddiv = document.getElementById("cardid");
 const cardid = carddiv.innerText; 
-const calledNumbers = [];
+var calledNumbers = [];
 var intervalId;
 const calledNumbersElement = document.getElementById("called-numbers");
 const lastCalledNumberElement = document.getElementById("last-called");
+var countindex  = 0;
+const serverUrl = 'localhost:8000';
+
+// Host Code
+
+let socket = null;
+
+// Function to start the game and create WebSocket server
+function connetToGame() {
+    // Generate a unique game ID
+
+    // Create WebSocket server
+    socket = new WebSocket(`ws://${serverUrl}/ws/game-socket/${gameid}/`);
+
+    // WebSocket event listeners
+    socket.onopen = function(event) {
+        console.log('WebSocket connection established.');
+    };
+
+    socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        console.log(data)
+        // Handle messages received from players
+        if (data.type === 'random_number') {
+          randomNumbers = data.random_number;
+          calledNumbers.push(randomNumbers);
+          updateCalledNumbersView();
+        }
+        if(data.type == 'result'){
+          var message = data.data;
+          var result = message[0];
+          generateResultHTML(result);
+        }
+    };
+
+    socket.onclose = function(event) {
+        console.log('WebSocket connection closed.');
+    };
+}
+
+window.onload = function() {
+  connetToGame();
+};
+
+document.getElementById("start-game").addEventListener("click", function () {
+  const message = {
+    type: 'game_start'
+  }; 
+  socket.send(JSON.stringify(message));
+});
+
+document.getElementById("bingoButton").addEventListener("click",function(){
+  const message = {
+    type: 'bingo',
+    card_id: cardid
+  }; 
+  socket.send(JSON.stringify(message));
+});
+
+// Define a function to generate the HTML dynamically
+function generateResultHTML(cardResult) {
+  var resultContainer = document.getElementById("blur-background");
+  resultContainer.style.display = "block";
+  var resultDiv = document.createElement("div");
+  resultDiv.className = "result-container";
+
+  var innerDiv = document.createElement("div");
+  innerDiv.className = "result";
+  innerDiv.id = "result";
+
+  if (cardResult.message === 'Bingo') {
+      // Handle Bingo message
+      // Create and append necessary HTML elements
+      var tableContainer = document.createElement("div");
+      tableContainer.className = "table-container";
+
+      var p = document.createElement("p");
+      p.className = "bingo";
+      p.textContent = cardResult.card_name + " - " + cardResult.message;
+      tableContainer.appendChild(p);
+
+      var table = document.createElement("table");
+      var tr = document.createElement("tr");
+      var thLetters = ["B", "I", "N", "G", "O"];
+      thLetters.forEach(function(letter) {
+          var th = document.createElement("th");
+          th.textContent = letter;
+          tr.appendChild(th);
+      });
+      table.appendChild(tr);
+      var counter = 1;
+      cardResult.card.forEach(function(row) {
+        var tr = document.createElement("tr");
+        row.forEach(function(cell) {
+            var td = document.createElement("td");
+            td.textContent = cell === 0 ? "★" : cell;
+            if (cardResult.winning_numbers.includes(counter)) {
+                td.className = "winning-row";
+            }else if (calledNumbers.includes(cell)) {
+              td.className = "remaining-number";
+            }
+            tr.appendChild(td);
+            counter++;
+        });
+        table.appendChild(tr);
+    });
+
+    tableContainer.appendChild(table);
+    innerDiv.appendChild(tableContainer);
+
+  } else {
+      // Handle No Bingo message
+      var tableContainer = document.createElement("div");
+      tableContainer.className = "table-container";
+
+      var p = document.createElement("p");
+      p.className = "no-bingo";
+      p.textContent = cardResult.card_name + " - " + cardResult.message;
+      tableContainer.appendChild(p);
+
+      var table = document.createElement("table");
+      var tr = document.createElement("tr");
+      var thLetters = ["B", "I", "N", "G", "O"];
+      thLetters.forEach(function(letter) {
+          var th = document.createElement("th");
+          th.textContent = letter;
+          tr.appendChild(th);
+      });
+      table.appendChild(tr);
+
+      cardResult.card.forEach(function(row) {
+          var tr = document.createElement("tr");
+          row.forEach(function(cell) {
+              var td = document.createElement("td");
+              td.textContent = cell === 0 ? "★" : cell;
+              if (calledNumbers.includes(cell)) {
+                  td.className = "remaining-number";
+              }else if(cell==0){
+                td.className = "remaining-number";
+              }
+              tr.appendChild(td);
+          });
+          table.appendChild(tr);
+      });
+
+      tableContainer.appendChild(table);
+      innerDiv.appendChild(tableContainer);
+
+      socket.close();
+  }
+
+  resultDiv.appendChild(innerDiv);
+  resultContainer.appendChild(resultDiv);
+}
+
 function fetchBigoStat() {
   // Make an AJAX request to your Django view to fetch the updated list of selected numbers
   $.ajax({
@@ -33,59 +188,6 @@ function fetchBigoStat() {
   });
 }
 
-function fetchRandomNumbers() {
-  $.ajax({
-      url: "/get-random-numbers/?paramName=" + gameid,  // Replace with the URL of your Django view
-      type: "GET",
-      success: function(response) {
-          // Handle the response (e.g., update UI with the received numbers)
-          var newValue = response.random_number;
-          calledNumbers.push(newValue);
-          updateCalledNumbersView();
-      },
-      error: function(xhr, status, error) {
-          console.error("Failed to fetch random numbers:", error);
-      }
-  });
-}
-
-function checkBingo() {
-  $.ajax({
-      url: "/checkBingo/",  // Replace with the URL of your Django view
-      type: "GET",
-      data: {
-        game: gameid,
-        card: cardid // Replace 'value2' with the second parameter value you want to pass
-      },
-      success: function(response) {
-          // Handle the response (e.g., update UI with the received numbers)
-          console.log("Failed to fetch random numbers:", cardid);
-      },
-      error: function(xhr, status, error) {
-          console.error("Failed to fetch random numbers:", error);
-      }
-  });
-}
-
-
-function startFetchingRandomNumbers() {
-  intervalId = setInterval(fetchRandomNumbers, 5000); // Call fetchRandomNumbers every 5 seconds (5000 milliseconds)
-}
-
-// Function to stop fetching random numbers
-function stopFetchingRandomNumbers() {
-  clearInterval(intervalId); // Clear the interval to stop further calls to fetchRandomNumbers
-}
-
-document.getElementById("start-game").addEventListener("click", function() {
-  startFetchingRandomNumbers(); // Start fetching random numbers when the "Start" button is clicked
-});
-
-document.getElementById("bingoButton").addEventListener("click", function() {
-  stopFetchingRandomNumbers(); // Stop fetching random numbers when the "Bingo" button is clicked
-  checkBingo();
-});
-
 document.addEventListener("DOMContentLoaded", function () {
 
   calledNumbers.forEach((number, index) => {
@@ -100,6 +202,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
   fetchBigoStat();
+  setInterval(fetchBigoStat, 3000);
 });
 
 function updateCalledNumbersView() {

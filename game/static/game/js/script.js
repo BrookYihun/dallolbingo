@@ -8,6 +8,9 @@ document.addEventListener("DOMContentLoaded", function () {
   let startIndex = 0;
   const buttonsPerPage = 100;
   var selectedCardNumber = 0;
+  let time = 60; // Initial time in seconds
+  const timerDisplay = document.getElementById('timer');
+  var timerInterval;
 
   if (selectedCardNumber == 0){
     playButton.disabled = true;
@@ -130,6 +133,18 @@ document.addEventListener("DOMContentLoaded", function () {
         gameStatRow.innerHTML += '<td>' + gameData.stake + '</td>';
         gameStatRow.innerHTML += '<td>' + gameData.number_of_players + '</td>';
         gameStatRow.innerHTML += '<td>' + gameData.winner_price + '</td>';
+        console.log(gameData);
+        if (gameData.time_started != "0"){
+          var start_time = new Date(gameData.time_started);
+          var current_time = new Date();
+          var dif_time = (current_time.getTime() - start_time.getTime()) / 1000;
+          time = time - dif_time;
+          time = Math.floor(time);
+          if (time<0){
+            window.location.href = 'http://127.0.0.1:8000/';
+          }
+          timerInterval = setInterval(updateTimer, 1000);
+        }
         disableButtons(selectedNumbers);
         
       },
@@ -175,3 +190,13 @@ document.addEventListener("DOMContentLoaded", function () {
   fetchSelectedNumbers();
   setInterval(fetchSelectedNumbers, 3000);
 });
+
+function updateTimer() {
+  timerDisplay.innerText = time;
+  if (time > 0) {
+    time--;
+  } else {
+    clearInterval(timerInterval);
+     // You can replace this with any other action when the timer reaches 0
+  }
+}

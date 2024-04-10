@@ -5,21 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pick Card</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha384-pgwBm0O4FcQUc2C5CjXul7Z/n0I5XsIULo2EpfQu1RWy2+fP4wLSgTysv2hZvhVO" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam&display=swap">
   <link rel="stylesheet" href="{% static 'game/css/style.css' %}">
   <script src="{% static 'game/js/jquery-3.7.1.min.js' %}"></script>
 </head>
 <body>
     <header>
-        <div>
-            
-        </div>
-        <div>
-            <i class="fas fa-wallet"></i> <span id="user-wallet">$100</span>
-        </div>
-        <div id="gameid" style="display:none;">{{gameid}}</div>
-      </header>
-    <div class="container">
+      <div class="wallet">
+        <i class="fa-solid fa-wallet"></i>
+        <span class="amount">{{acc.wallet}}</span>
+      </div>
+      <div>
+        <span>Dallol Bingo</span>
+      </div>
+      <div class="timer">
+        <i class="fa-regular fa-clock"></i>
+        <span class="amount" id="timer">60</span>
+      </div>
+    </header>
+    <div id="gameid" style="display:none;">{{gameid}}</div>
+    <div class="secound-container" >
+      <div class="container">
         <table>
         <thead>
             <th>Game</th>
@@ -54,8 +60,12 @@
           </div>
         </div>
       </div>
-
+      <footer>
+        <p>&copy; 2024 Dallol Technologies</p>
+      </footer>
+    </div>
   <script src="{% static 'game/js/script.js' %}"></script>
+  <script src="https://kit.fontawesome.com/24a72a6d2d.js" crossorigin="anonymous"></script>
   
 </body>
 </html>

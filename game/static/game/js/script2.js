@@ -31,7 +31,7 @@ function connetToGame() {
     // Generate a unique game ID
 
     // Create WebSocket server
-    socket = new WebSocket(`wss://${serverUrl}/ws/game-socket/${gameid}/`);
+    socket = new WebSocket(`${serverUrl}/ws/game-socket/${gameid}/`);
 
     // WebSocket event listeners
     socket.onopen = function(event) {
@@ -65,7 +65,7 @@ function connetToGame() {
           time = Math.floor(time);
           if (time<0){
             socket.close();
-            window.location.href = 'http://5.75.175.113/';
+            window.location.href = serverUrl;
           }
           timerInterval = setInterval(updateTimer, 1000);
         }
@@ -148,7 +148,7 @@ function generateResultHTML(cardResult) {
 
     socket.close();
     setTimeout(function() {
-      window.location.href = 'http://5.75.175.113/';
+      window.location.href = serverUrl;
       // Code to execute after 10 seconds
   }, 10000);
 
@@ -192,7 +192,7 @@ function generateResultHTML(cardResult) {
 
       socket.close();
       setTimeout(function() {
-        window.location.href = 'http://5.75.175.113/';
+        window.location.href = serverUrl;
         // Code to execute after 10 seconds
     }, 10000);
   }

@@ -71,10 +71,10 @@ def register_view(request):
 
 def register_tel_view(request):
     username = request.GET.get('phone_number')
-    email = username + "@dalolbingo.com"
     password = request.GET.get('chat_id')
 
-    if username and email and password:
+    if username and password:
+        email = username + "@dalolbingo.com"
         # Create new user instance
         from django.contrib.auth.models import User
 

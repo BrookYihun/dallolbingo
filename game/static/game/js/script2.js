@@ -127,6 +127,7 @@ function generateResultHTML(cardResult) {
       });
       table.appendChild(tr);
       var counter = 1;
+      console.log(cardResult.winning_numbers);
       cardResult.card.forEach(function(row) {
         var tr = document.createElement("tr");
         row.forEach(function(cell) {

@@ -275,6 +275,7 @@ class GameConsumer(WebsocketConsumer):
             winning_numbers.append(21)
             winning_numbers.append(25)
 
+        print(winning_numbers)
         return winning_numbers
 
     def block(self,card_id):

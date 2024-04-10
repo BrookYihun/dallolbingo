@@ -141,7 +141,7 @@ document.addEventListener("DOMContentLoaded", function () {
           time = time - dif_time;
           time = Math.floor(time);
           if (time<0){
-            window.location.href = 'http://127.0.0.1:8000/';
+            window.location.href = 'http://5.75.175.113/';
           }
           timerInterval = setInterval(updateTimer, 1000);
         }

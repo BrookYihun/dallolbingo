@@ -31,7 +31,7 @@ function connetToGame() {
     // Generate a unique game ID
 
     // Create WebSocket server
-    socket = new WebSocket(`${serverUrl}/ws/game-socket/${gameid}/`);
+    socket = new WebSocket(`wss://${serverUrl}/ws/game-socket/${gameid}/`);
 
     // WebSocket event listeners
     socket.onopen = function(event) {

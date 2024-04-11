@@ -40,34 +40,31 @@ def index(request):
 
 @custom_csrf_protect
 def telegram(request):
-    if request.method == 'GET':
-        token = request.GET.get("token")
-        stake = int(request.GET.get("stake"))
-        dec_token = base64.b64decode(token).decode("utf-8")
-        user_parts = dec_token.split(':')
-        user = authenticate(request, username=user_parts[0], password=user_parts[1])
-        if user is not None and user.is_authenticated:
-            login(request, user)
-            from account.models import Account
-            acc = Account.objects.get(user=user)
-            from django.db.models import Q
-            from game.models import Game
-            if int(acc.wallet) > stake:
-                game = Game.objects.filter(Q(stake=stake) & (Q(played="Created") | Q(played="Started"))).order_by('-id').last()
-                if game is not None:
-                    return redirect (pick_card,game.id)
-                else:
-                    new_game = Game.objects.create()
-                    new_game.stake = int(stake)
-                    new_game.save_random_numbers(generate_random_numbers())
-                    new_game.save()
-                    return redirect (pick_card,new_game.id)
+    token = request.GET.get("token")
+    stake = int(request.GET.get("stake"))
+    dec_token = base64.b64decode(token).decode("utf-8")
+    user_parts = dec_token.split(':')
+    user = authenticate(request, username=user_parts[0], password=user_parts[1])
+    if user is not None and user.is_authenticated:
+        login(request, user)
+        from account.models import Account
+        acc = Account.objects.get(user=user)
+        from django.db.models import Q
+        from game.models import Game
+        if int(acc.wallet) > stake:
+            game = Game.objects.filter(Q(stake=stake) & (Q(played="Created") | Q(played="Started"))).order_by('-id').last()
+            if game is not None:
+                return redirect (pick_card,game.id)
             else:
-                return render (request,'game/index.html')
+                new_game = Game.objects.create()
+                new_game.stake = int(stake)
+                new_game.save_random_numbers(generate_random_numbers())
+                new_game.save()
+                return redirect (pick_card,new_game.id)
         else:
-            return HttpResponse("First Register via Telegram")
-
-    return render (request,'game/index.html')
+            return render (request,'game/index.html')
+    else:
+        return HttpResponse("First Register via Telegram")
 
 @login_required
 def pick_card(request,gameid):

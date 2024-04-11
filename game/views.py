@@ -38,7 +38,6 @@ def index(request):
 
     return render (request,'game/index.html')
 
-@custom_csrf_protect
 def telegram(request):
     token = request.GET.get("token")
     stake = int(request.GET.get("stake"))

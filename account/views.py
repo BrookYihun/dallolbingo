@@ -23,7 +23,7 @@ def login_view(request):
     return render(request, 'account/login.html', {'error_message': error_message})
 
 def login_tel_view(request,data):
-    decoded_custom_token = base64.b64decode(data)
+    decoded_custom_token = base64.b64decode(data).decode("utf-8")
     parts = decoded_custom_token.split(':')
 
     if len(parts)!=2:
@@ -43,21 +43,26 @@ def logout_view(request):
 
 def register_view(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
+        phone_number = request.POST.get('phone_number')
         email = request.POST.get('email')
         password = request.POST.get('password')
 
-        if username and email and password:
+        if phone_number and email and password:
             # Create new user instance
             from django.contrib.auth.models import User
 
-            new_user = User.objects.create_user(username=username, email=email, password=password)
+            new_user = User.objects.create_user(username=phone_number, email=email, password=password)
             
             # Optionally, you can perform additional actions like login the user after signup
             # For example: login(request, new_user)
             
             messages.success(request, 'Your account has been created successfully. You can now log in.')
+            print("hello")
             if new_user is not None and new_user.is_authenticated:
+                from .models import Account
+                acc = Account.objects.get(user=new_user)
+                acc.phone_number = phone_number
+                acc.save()
                 login(request, new_user)
                 return redirect('index')  # Redirect to the user's dashboard
 

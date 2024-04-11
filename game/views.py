@@ -1,9 +1,10 @@
+import base64
 from django.utils import timezone
 import json
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
-
+from django.contrib.auth import authenticate, login, logout
 from account.views import custom_csrf_protect
 
 import random
@@ -38,26 +39,33 @@ def index(request):
     return render (request,'game/index.html')
 
 @custom_csrf_protect
-def telIndex(request):
-    if request.method == 'POST':
-        stake = int(request.POST.get("stake"))
-        user = request.user
-        from account.models import Account
-        acc = Account.objects.get(user=user)
-        from django.db.models import Q
-        from game.models import Game
-        if int(acc.wallet) > stake:
-            game = Game.objects.filter(Q(stake=stake) & (Q(played="Created") | Q(played="Started"))).order_by('-id').last()
-            if game is not None:
-                return redirect (pick_card,game.id)
+def telegram(request):
+    if request.method == 'GET':
+        token = request.GET.get("token")
+        stake = int(request.GET.get("stake"))
+        dec_token = base64.b64decode(token).decode("utf-8")
+        user_parts = dec_token.split(':')
+        user = authenticate(request, username=user_parts[0], password=user_parts[1])
+        if user is not None and user.is_authenticated:
+            login(request, user)
+            from account.models import Account
+            acc = Account.objects.get(user=user)
+            from django.db.models import Q
+            from game.models import Game
+            if int(acc.wallet) > stake:
+                game = Game.objects.filter(Q(stake=stake) & (Q(played="Created") | Q(played="Started"))).order_by('-id').last()
+                if game is not None:
+                    return redirect (pick_card,game.id)
+                else:
+                    new_game = Game.objects.create()
+                    new_game.stake = int(stake)
+                    new_game.save_random_numbers(generate_random_numbers())
+                    new_game.save()
+                    return redirect (pick_card,new_game.id)
             else:
-                new_game = Game.objects.create()
-                new_game.stake = int(stake)
-                new_game.save_random_numbers(generate_random_numbers())
-                new_game.save()
-                return redirect (pick_card,new_game.id)
+                return render (request,'game/index.html')
         else:
-          return render (request,'game/index.html')
+            return HttpResponse("First Register via Telegram")
 
     return render (request,'game/index.html')
 

@@ -51,17 +51,19 @@ def telegram(request):
         from django.db.models import Q
         from game.models import Game
         if int(acc.wallet) > stake:
-            game = Game.objects.filter(Q(stake=stake) & (Q(played="Created") | Q(played="Started"))).order_by('-id').last()
+            game = Game.objects.filter(stake=stake,played="Created").order_by('-id').last()
+            game2 = Game.objects.filter(stake=stake,played="Started").order_by('-id').last()
+            if game2 is not None:
+                elapsed_time = (timezone.now() - game2.started_at).total_seconds()
+                if elapsed_time < 60:
+                    return redirect (pick_card,game2.id)
             if game is not None:
                 return redirect (pick_card,game.id)
-            else:
-                new_game = Game.objects.create()
-                new_game.stake = int(stake)
-                new_game.save_random_numbers(generate_random_numbers())
-                new_game.save()
-                return redirect (pick_card,new_game.id)
-        else:
-            return render (request,'game/index.html')
+            new_game = Game.objects.create()
+            new_game.stake = int(stake)
+            new_game.save_random_numbers(generate_random_numbers())
+            new_game.save()
+            return redirect (pick_card,new_game.id)
     else:
         return HttpResponse("First Register via Telegram")
 

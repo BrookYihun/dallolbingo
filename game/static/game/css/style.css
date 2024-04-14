@@ -39,6 +39,8 @@ body {
   
   /* Container */
   .container {
+    justify-content: center;
+    align-items: center;
     margin: 50px auto;
     padding: 10px;
     box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.2);

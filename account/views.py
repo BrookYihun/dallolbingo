@@ -57,7 +57,6 @@ def register_view(request):
             # For example: login(request, new_user)
             
             messages.success(request, 'Your account has been created successfully. You can now log in.')
-            print("hello")
             if new_user is not None and new_user.is_authenticated:
                 from .models import Account
                 acc = Account.objects.get(user=new_user)

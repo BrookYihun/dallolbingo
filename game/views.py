@@ -64,6 +64,7 @@ def telegram(request):
             new_game.save_random_numbers(generate_random_numbers())
             new_game.save()
             return redirect (pick_card,new_game.id)
+        return HttpResponse("First Deposit to wallet via Telegram")
     else:
         return HttpResponse("First Register via Telegram")
 

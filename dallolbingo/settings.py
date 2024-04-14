@@ -33,6 +33,10 @@ ALLOWED_HOSTS = [
     'https://www.dallolbingo.com',
     '127.0.0.1'
 ]
+CORS_ALLOWED_ORIGINS = [
+    "https://www.dallolbingo.com",
+    # Add other origins as needed
+]
 
 
 # Application definition
@@ -56,6 +60,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

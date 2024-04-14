@@ -29,7 +29,8 @@ DEBUG = True
 ALLOWED_HOSTS = [
     '5.75.175.113',
     'dallolbingo.com',
-    'www.dallolbingo.com'
+    'www.dallolbingo.com',
+    '127.0.0.1'
 ]
 
 

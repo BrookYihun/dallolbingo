@@ -165,6 +165,8 @@ def get_wallet_tel(request):
             login(request, user)
             from .models import Account
             acc = Account.objects.get(user=user)
+            input_string = username+":"+password
+            encoded_bytes = base64.b64encode(input_string.encode("utf-8"))
             responseJson = {
                 'token': str(encoded_bytes),
                 'wallet': acc.wallet

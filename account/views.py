@@ -98,6 +98,10 @@ def register_tel_view(request):
         messages.success(request, 'Your account has been created successfully. You can now log in.')
         if new_user is not None and new_user.is_authenticated:
             login(request, new_user)
+            from .models import Account
+            acc = Account.objects.get(user=new_user)
+            acc.phone_number = username
+            acc.save()
             input_string = username+":"+password
             encoded_bytes = base64.b64encode(input_string.encode("utf-8"))
             responseJson = {
@@ -147,3 +151,22 @@ def custom_csrf_protect(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped_view
+
+def get_wallet_tel(request):
+    username = request.GET.get('phone_number')
+    password = request.GET.get('chat_id')
+
+    if username and password:
+        # Create new user instance
+        from django.contrib.auth.models import User
+
+        user = authenticate(request, username=username, password=password)
+        if user:
+            login(request, user)
+            from .models import Account
+            acc = Account.objects.get(user=user)
+            responseJson = {
+                'token': str(encoded_bytes),
+                'wallet': acc.wallet
+            }
+            return JsonResponse(responseJson)

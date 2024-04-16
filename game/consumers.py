@@ -172,7 +172,7 @@ class GameConsumer(WebsocketConsumer):
             winning_numbers = self.has_bingo(numbers, called_numbers_list)
             if len(winning_numbers)>0:
                 from django.contrib.auth.models import User
-                result.append({'card_name': card.id, 'message': 'Bingo', 'card': numbers, 'winning_numbers':winning_numbers})
+                result.append({'card_name': card.id, 'message': 'Bingo', 'card': numbers, 'winning_numbers':winning_numbers,'called_numbers':called_numbers_list})
                 user = User.objects.get(id=player_id)
                 from account.models import Account
                 acc = Account.objects.get(user=user)

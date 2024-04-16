@@ -128,7 +128,6 @@ function generateResultHTML(cardResult) {
       });
       table.appendChild(tr);
       var counter = 1;
-      console.log(cardResult.winning_numbers);
       cardResult.card.forEach(function(row) {
         var tr = document.createElement("tr");
         row.forEach(function(cell) {
@@ -136,7 +135,7 @@ function generateResultHTML(cardResult) {
             td.textContent = cell === 0 ? "★" : cell;
             if (cardResult.winning_numbers.includes(counter)) {
                 td.className = "winning-row";
-            }else if (calledNumbers.includes(cell)) {
+            }else if (cardResult.called_numbers.includes(cell)) {
               td.className = "remaining-number";
             }
             tr.appendChild(td);

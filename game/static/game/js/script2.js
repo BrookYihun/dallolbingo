@@ -90,7 +90,8 @@ startButton.addEventListener("click", function () {
 bingoButton.addEventListener("click",function(){
   const message = {
     type: 'bingo',
-    card_id: cardid
+    card_id: cardid,
+    calledNumbers: calledNumbers
   }; 
   socket.send(JSON.stringify(message));
 });

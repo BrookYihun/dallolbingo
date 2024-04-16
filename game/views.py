@@ -19,7 +19,7 @@ def index(request):
         from account.models import Account
         from game.models import Game
         acc = Account.objects.get(user=user)
-        if int(acc.wallet) > stake:
+        if int(acc.wallet) >= stake:
             game = Game.objects.filter(stake=stake,played="Created").order_by('-id').last()
             game2 = Game.objects.filter(stake=stake,played="Started").order_by('-id').last()
             if game2 is not None:
@@ -50,7 +50,7 @@ def telegram(request):
         acc = Account.objects.get(user=user)
         from django.db.models import Q
         from game.models import Game
-        if int(acc.wallet) > stake:
+        if int(acc.wallet) >= stake:
             game = Game.objects.filter(stake=stake,played="Created").order_by('-id').last()
             game2 = Game.objects.filter(stake=stake,played="Started").order_by('-id').last()
             if game2 is not None:

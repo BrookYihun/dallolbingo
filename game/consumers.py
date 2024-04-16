@@ -64,7 +64,7 @@ class GameConsumer(WebsocketConsumer):
             self.timer_thread.start()
         
         if data['type'] == 'bingo':
-            async_to_sync(self.checkBingo(int(data['card_id'])))
+            async_to_sync(self.checkBingo(int(data['card_id']),data['calledNumbers']))
             if self.bingo == True:
                 self.is_running = False
                 if self.timer_thread:
@@ -152,19 +152,15 @@ class GameConsumer(WebsocketConsumer):
             'data': result
         }))
     
-    def checkBingo(self,card_id):
+    def checkBingo(self,card_id,calledNumbers):
         from game.models import Card, Game
         game = Game.objects.get(id=int(self.game_id))
-
-        if not self.called_numbers :
-            pass
-
         result = []
         players = json.loads(game.playerCard)
         player_cards = [entry['card'] for entry in players]
         card_found = int(card_id) in player_cards
         player_id = next((entry['user'] for entry in players if entry['card'] == card_id), None)
-        called_numbers_list = self.called_numbers
+        called_numbers_list = calledNumbers
         called_numbers_list.append(0)
         game.total_calls = len(called_numbers_list)
         game.save_called_numbers(called_numbers_list) 

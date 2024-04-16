@@ -153,22 +153,15 @@ def custom_csrf_protect(view_func):
     return _wrapped_view
 
 def get_wallet_tel(request):
-    username = request.GET.get('phone_number')
-    password = request.GET.get('chat_id')
-
-    if username and password:
-        # Create new user instance
-        from django.contrib.auth.models import User
-
-        user = authenticate(request, username=username, password=password)
-        if user:
-            login(request, user)
-            from .models import Account
-            acc = Account.objects.get(user=user)
-            input_string = username+":"+password
-            encoded_bytes = base64.b64encode(input_string.encode("utf-8"))
-            responseJson = {
-                'token': str(encoded_bytes),
-                'wallet': acc.wallet
-            }
-            return JsonResponse(responseJson)
+    token = request.GET.get("token")
+    dec_token = base64.b64decode(token).decode("utf-8")
+    user_parts = dec_token.split(':')
+    user = authenticate(request, username=user_parts[0], password=user_parts[1])
+    if user is not None and user.is_authenticated:
+        login(request, user)
+        from .models import Account
+        acc = Account.objects.get(user=user)
+        responseJson = {
+            'wallet': acc.wallet
+        }
+        return JsonResponse(responseJson)

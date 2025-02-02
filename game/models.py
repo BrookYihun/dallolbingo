@@ -48,8 +48,8 @@ class CashierGame(models.Model):
     def __str__(self) -> str:
         return f"{self.user.username} - Game {self.game.id}"
     
-    def get_card_numbers(self):
-        # Load existing players
-        players = json.loads(self.selected_players)
+    # def get_card_numbers(self):
+    #     # Load existing players
+    #     players = json.loads(self.selected_players)
         
-        return players
+    #     return players

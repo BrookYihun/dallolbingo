@@ -41,15 +41,15 @@ class UserGame(models.Model):
 class CashierGame(models.Model):
     user = models.ForeignKey(User,on_delete=models.CASCADE)
     game = models.ForeignKey(Game,on_delete=models.CASCADE)
-    
+    selected_players = models.JSONField(default=list)
     collected = models.DecimalField(max_digits=100,default=0,decimal_places=2)
     pied = models.DecimalField(max_digits=100,default=0,decimal_places=2)
 
     def __str__(self) -> str:
         return f"{self.user.username} - Game {self.game.id}"
     
-    # def get_card_numbers(self):
-    #     # Load existing players
-    #     players = json.loads(self.selected_players)
+    def get_card_numbers(self):
+        # Load existing players
+        players = json.loads(self.selected_players)
         
-    #     return players
+        return players

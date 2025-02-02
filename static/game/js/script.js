@@ -1,177 +1,814 @@
-document.addEventListener("DOMContentLoaded", function () {
-  const buttonsContainer = document.getElementById("buttons-container");
-  const prevButton = document.getElementById("prev-btn");
-  const nextButton = document.getElementById("next-btn");
-  const playButton = document.getElementById("play-btn");
-  const gamediv = document.getElementById("gameid");
-  const gameid = gamediv.innerText;
-  let startIndex = 0;
-  const buttonsPerPage = 100;
-  var selectedCardNumber = 0;
+// Wait for the page to fully load
+const fullscreen = document.getElementById('full-screen');
 
-  if (selectedCardNumber == 0){
-    playButton.disabled = true;
-  }
+const allSideMenu = document.querySelectorAll('#sidebar .side-menu.top li a');
 
-  function generateButtons() {
-      buttonsContainer.innerHTML = ""; // Clear previous buttons
+// TOGGLE SIDEBAR
+const menuBar = document.querySelector('#content nav .bx.bx-menu');
+const sidebar = document.getElementById('sidebar');
 
-      for (let i = startIndex; i < startIndex + buttonsPerPage && i < 1000; i++) {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "btn btn-primary custom-btn";
-          button.innerText = i + 1;
-          button.addEventListener("click", function () {
-            selectedCardNumber = i+1;
-            fetchBingoCard(i + 1);
-            playButton.disabled = false; // Call handleButtonClick function with button value
-          });
-          buttonsContainer.appendChild(button);
-      }
-  }
+var numberElements = document.querySelectorAll('.number');
+var calledNumbers = [];
+var callednumberdisplay = document.getElementById('called-numbers');
+var lastletter = document.getElementById('last-letter');
+var lastnum = document.getElementById('last-num');
+var callingSpeedRange = document.getElementById('callingSpeed');
+var callingSpeedTxt = document.getElementById('callingSpeedTxt');
+var callinginterval = 5000;
+var autoIntervalId = null;
+var autoPlaying = false;
+var selectedLanguage = "am";
+let speech = new SpeechSynthesisUtterance();
+let voices = [];
+let bonus_c = document.getElementById('bonus_animation');
+let bonus_t = document.getElementById('bonus_text');
+let free_c = document.getElementById('free_hit');
+let free_t = document.getElementById('free_hit_text');
 
-  generateButtons();
+menuBar.addEventListener('click', function () {
+	sidebar.classList.toggle('hide');
+})
 
-  // Function to disable buttons based on selected numbers
-  function disableButtons(selectedNumbers) {
-      const buttons = buttonsContainer.querySelectorAll(".custom-btn");
-      buttons.forEach(button => {
-          const number = parseInt(button.innerText);
-          if (selectedNumbers.includes(number)) {
-              button.disabled = true;
-          } else {
-              button.disabled = false;
-          }
-      });
-  }
 
-  prevButton.addEventListener("click", function () {
-      if (startIndex >= buttonsPerPage) {
-          startIndex -= buttonsPerPage;
-          generateButtons();
-      }
-  });
+if(window.innerWidth < 768) {
+	sidebar.classList.add('hide');
+}
 
-  nextButton.addEventListener("click", function () {
-      if (startIndex + buttonsPerPage < 1000) {
-          startIndex += buttonsPerPage;
-          generateButtons();
-      }
-  });
+const switchMode = document.getElementById('switch-mode');
 
-  playButton.addEventListener("click", function () {
-    var form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/pick/'+gameid+'/'; // Replace with your Django view URL
+switchMode.addEventListener('change', function () {
+    deleteCookie("mode");
+    setCookie("mode",this.checked,7);
+	if(this.checked) {
+		document.body.classList.remove('dark');
+	} else {
+		document.body.classList.add('dark');
+	}
+})
+window.addEventListener('load', function() {
+    // Get the loader element
+    var loader = document.getElementById('loader');
 
-    var csrftoken = getCookie('csrftoken');
+    // Hide the loader element
+    loader.style.display = 'none';
 
-    // Create a hidden input element for the CSRF token
-    var csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrfmiddlewaretoken';
-    csrfInput.value = csrftoken;
+    var footer = document.getElementById('footer');
+    var bingo_con = document.getElementById('bingo-container');
+    var index_a = this.document.getElementById('index');
 
-    // Add the CSRF token input to the form
-    form.appendChild(csrfInput);
+    index_a.classList.add('active');
+    footer.style.display = "block";
+    bingo_con.style.display = "block";
 
-    // Create an input element for the selected number
-    var input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'selected_number';
-    input.value = selectedCardNumber;
-
-    // Add the input element to the form
-    form.appendChild(input);
-
-    // Append the form to the document body
-    document.body.appendChild(form);
-
-    // Submit the form
-    form.submit();
-    
-  });
-
-  function getCookie(name) {
-    var cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      var cookies = document.cookie.split(';');
-      for (var i = 0; i < cookies.length; i++) {
-        var cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
+    var cookieLanguage = getCookie("selectedLanguage");
+    if (cookieLanguage!=null){
+        if (cookieLanguage == "am"){
+        callerLanguageSelect.selectedIndex = 0;
+        selectedLanguage = "am";
+        }else if (cookieLanguage == "mm"){
+        callerLanguageSelect.selectedIndex = 1;
+        selectedLanguage = "mm";
+        }else{
+        selectedLanguage = 0;
+        callerLanguageSelect.selectedIndex = 4;
         }
-      }
     }
-    return cookieValue;
+    var modeCookie = getCookie("mode");
+    if(modeCookie !=null){
+        if(modeCookie) {
+            document.body.classList.remove('dark');
+        } else {
+            document.body.classList.add('dark');
+        }
+    }
+
+    var speed = getCookie("speed");
+    if(speed != null){
+        callingSpeedRange.value = speed;
+        const invertedValue = 12 - (speed - 2);
+        callinginterval = invertedValue *1000;
+        callingSpeedTxt.textContent = "Auto call " + invertedValue +" secounds";
+    }
+
+});
+
+// Function to toggle light mode and dark mode
+
+// Function to toggle full screen mode
+function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
+}
+
+// Event listener for clicking on full screen image
+fullscreen.addEventListener("click", toggleFullScreen);
+
+var callerLanguageSelect = document.getElementById('lang');
+
+function setCookie(cookieName, cookieValue, expirationDays) {
+    const d = new Date();
+    d.setTime(d.getTime() + (expirationDays * 24 * 60 * 60 * 1000));
+    const expires = `expires=${d.toUTCString()}`;
+    document.cookie = `${cookieName}=${cookieValue}; ${expires}; path=/`;
+}
+
+function getCookie(cookieName) {
+    const name = `${cookieName}=`;
+    const cookies = document.cookie.split(';');
+    for(let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.indexOf(name) === 0) {
+            return cookie.substring(name.length, cookie.length);
+        }
+    }
+    return null;
+}
+
+function deleteCookie(cookieName) {
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+}
+
+function getLanguage(){
+    selectedLanguage = callerLanguageSelect.value;
+    return selectedLanguage;
+}
+
+callerLanguageSelect.addEventListener('change', function() {
+    // Update the language for call-out-loud
+    selectedLanguage = callerLanguageSelect.value;
+    deleteCookie("selectedLanguage");
+    setCookie("selectedLanguage",selectedLanguage,7);
+    // Pass the selected language to the speakNumber function
+    if(selectedNewLanguage=='am'){
+        selectedLanguage = 'am';
+    }else if(selectedNewLanguage=='mm'){
+        selectedLanguage = 'mm';
+    }else{
+      speech.voice = voices[0];
+    }
+});
+
+callingSpeedRange.addEventListener('input', function() {
+    var newSpeed = callingSpeedRange.value;
+    const invertedValue = 12 - (newSpeed - 2);
+    callinginterval = invertedValue *1000;
+    callingSpeedTxt.textContent = "Auto call " + invertedValue +" secounds";
+    deleteCookie("speed");
+    setCookie("speed",newSpeed,7);
+    // Convert speed to milliseconds
+});
+
+function updateTotalCalled() {
+    var totalCalledClock = document.getElementById('total-called');
+    totalCalledClock.textContent = calledNumbers.length + " CALLED";
+}
+
+function callNumber() {
+    var remainingNumbers = getRemainingNumbers();
+    callednumberdisplay.style.display = "block";
+
+    if (remainingNumbers.length === 0) {
+        alert("All numbers have been called!");
+        return;
+    }
+
+    var randomIndex = Math.floor(Math.random() * remainingNumbers.length);
+    var selectedNumber = remainingNumbers[randomIndex];
+
+    calledNumbers.push(selectedNumber);
+
+    var numberElement = document.querySelector('.number[data-number="' + selectedNumber + '"]');
+    if (numberElement) {
+        changeBlink(selectedNumber);
+    }
+
+    var rowIndex = Math.floor(selectedNumber / 15); // Calculate the row index
+    var letter = 'B';
+    if(selectedNumber <=15){
+        letter='B';
+    }
+    else if(selectedNumber <=30){
+        letter='I';
+    }
+    else if(selectedNumber <=45){
+        letter='N';
+    }
+    else if(selectedNumber <=60){
+        letter='G';
+    }
+    else if(selectedNumber <=75){
+        letter='O';
+    }// Get the corresponding letter
+    var numStr = selectedNumber.toString();  // Convert the number to a string
+
+      // Create the desired string format by inserting a space between characters
+    var resultStr = numStr.split('').join(' ');
+    var displayedNumber = letter + (selectedNumber) + ", " + letter + "," + resultStr; // Calculate the displayed number
+    // This will log: "1 5"
+
+    selectedLanguage = getLanguage();
+    if (selectedLanguage=='am'){
+        filePath = "/static/game/audio/Voice "+selectedNumber+".mp3";
+        var audio = new Audio(filePath);
+        audio.play();
+    }else if (selectedLanguage=='mm'){
+        filePath = "/static/game/audio/male/"+selectedNumber+".mp3";
+        var audio = new Audio(filePath);
+        audio.play();
+    }else{
+        speech.voice = voices[0];
+        speech.text = displayedNumber;
+        window.speechSynthesis.speak(speech);
+    }
+
+    //var displayedNumber = letter + (selectedNumber) + ", " + letter + "," + resultStr; // Calculate the displayed number
+    lastletter.textContent = letter;
+    lastnum.textContent = selectedNumber;
+
+    updateLastCalledNumbers();
+    updateTotalCalled();
+
   }
+  
+ function changeBlink(number) {
+    const container = document.getElementById('bingo-num-container');
+    
+    // Remove blink class from any previously blinking divs
+    if (calledNumbers.length>1) {
+        const previousBlinkingDiv = container.querySelector('.blink');
+        previousBlinkingDiv.classList.remove('blink');
+        previousBlinkingDiv.classList.add('selected');
+    }
+    
+    // Find the div with the specified ID
+    const divToBlink = document.querySelector('.number[data-number="' + number + '"]');
+    if (divToBlink) {
+        // Add the blink class to the specified div
+        divToBlink.classList.add('blink');
+    } else {
+        console.warn(`No div found with ID: ${number}`);
+    }
+}
 
-  // Sample array of selected numbers
-  selectedNumbers = [];
+function updateLastCalledNumbers() {
+    var lastCalledNumbersElement = document.getElementById('lastCalledNumbers');
+    lastCalledNumbersElement.innerHTML = '';
 
-  function fetchSelectedNumbers() {
-    // Make an AJAX request to your Django view to fetch the updated list of selected numbers
+    for (var i = Math.max(0, calledNumbers.length - 5); i < calledNumbers.length; i++) {
+        var number = calledNumbers[i];
+        var numberElement = document.createElement('div');
+        numberElement.classList.add('last-called-num');
+        var letter = 'B';
+        if(number <=15){
+            letter='B';
+        }
+        else if(number <=30){
+            letter='I';
+        }
+        else if(number <=45){
+            letter='N';
+        }
+        else if(number <=60){
+            letter='G';
+        }
+        else if(number <=75){
+            letter='O';
+        }
+        numberElement.textContent = letter+" "+number;
+        lastCalledNumbersElement.appendChild(numberElement);
+    }
+}
+
+var startbtn = document.getElementById('start-auto-play');
+var callnextbtn = document.getElementById('call-next');
+var finshbtn = document.getElementById('finsh');
+var newgamebtn = document.getElementById('start-new-game');
+var shuffle_btn = document.getElementById('shuffle');
+var check_btn = document.getElementById('check-btn');
+var game_id = document.getElementById("game-id");
+
+startbtn.onclick = function(){
+    selectedLanguage = getLanguage();
+    if (autoPlaying) {
+        startbtn.textContent = "START AUTO PLAY";
+        if (selectedLanguage=='am'){
+            filePath = "/static/game/audio/stop.mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else if (selectedLanguage=='mm'){
+            filePath = "/static/game/audio/male/stop.mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else{
+            speech.voice = voices[0];
+            speech.text="game paused";
+            window.speechSynthesis.speak(speech);
+        }
+        stopAuto();
+    }else {
+        startbtn.textContent = "STOP AUTO PLAY";
+        if (selectedLanguage=='am'){
+            filePath = "/static/game/audio/start.mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else if (selectedLanguage=='mm'){
+            filePath = "/static/game/audio/male/start.mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else{
+            speech.voice = voices[0];
+            speech.text="game started";
+            window.speechSynthesis.speak(speech);
+        }
+        startAuto();
+    }
+};
+
+function startAuto() {
+    callnextbtn.classList.add('inactive');
+    shuffle_btn.classList.add('inactive');
+    finshbtn.classList.add('inactive');
+    check_btn.classList.add('inactive');
+
+    if (autoIntervalId) {
+        clearInterval(autoIntervalId);
+        autoIntervalId = null;
+        alert("Stopped");
+        return;
+    }
+
+    autoIntervalId = setInterval(function () {
+        callNumber();
+        var remainingNumbers = getRemainingNumbers();
+        if (remainingNumbers.length === 0) {
+            clearInterval(autoIntervalId);
+            autoIntervalId = null;
+        }
+    }, callinginterval);
+    autoPlaying = true;
+}
+
+function stopAuto() {
+    callnextbtn.classList.remove('inactive');
+    shuffle_btn.classList.remove('inactive');
+    finshbtn.classList.remove('inactive');
+    check_btn.classList.remove('inactive');
+    clearInterval(autoIntervalId);
+    autoIntervalId = null;
+    autoPlaying = false;
+}
+
+function getRemainingNumbers() {
+    var allNumbers = Array.from(document.querySelectorAll('.number'));
+    var remainingNumbers = allNumbers.filter(function (numberElement) {
+        return !numberElement.classList.contains('selected') && !numberElement.classList.contains('blink');
+    });
+
+    return remainingNumbers.map(function (numberElement) {
+        return parseInt(numberElement.getAttribute('data-number'));
+    });
+}
+
+
+callnextbtn.onclick = function(){
+    callNumber();
+};
+
+finshbtn.onclick = function(){
+    startbtn.style.display = "none";
+    callnextbtn.style.display = "none";
+    finshbtn.style.display = "none";
+    newgamebtn.style.display = "block";
+    shuffle_btn.style.display = "block";
     $.ajax({
-      url:  "/get-selected-numbers/?paramName=" + gameid,  // Replace with your Django view URL
+        url:  "/finish/",  // Replace with your Django view URL
+        type: "GET",
+        data: {
+          called: JSON.stringify(calledNumbers),
+          game: game_id.innerText,
+          // Add more parameters as needed
+      },
+        success: function(response) {
+          // Disable buttons based on the received list of selected numbers
+  
+          var result = response.result;
+          
+        },
+        error: function(xhr, status, error) {
+          console.error("Failed to check result", error);
+        }
+      });
+};
+
+check_btn.onclick = function () {
+    const check_num = document.getElementById('check-num').value;
+    if (check_num.trim() === "") {
+        alert("Input field cannot be empty");
+        return false; // Prevent form submission
+    }else{
+        checkBingo(check_num);
+    }
+}
+
+function checkBingo(num) {
+    // Make an AJAX request to your Django view to fetch the updated list of selected numbers
+    console.log(calledNumbers);
+    $.ajax({
+      url:  "/check/",  // Replace with your Django view URL
       type: "GET",
+      data: {
+        card: num,
+        called: JSON.stringify(calledNumbers),
+        game: game_id.innerText,
+        // Add more parameters as needed
+    },
       success: function(response) {
         // Disable buttons based on the received list of selected numbers
-        selectedNumbers = response.selectedNumbers;
-        var gameData = JSON.parse(response.game);
 
-        var gameStatRow = document.getElementById('game-stat');
-        // Remove existing <td> elements
-        while (gameStatRow.firstChild) {
-          gameStatRow.removeChild(gameStatRow.firstChild);
+        var result = response.result;
+
+        if (result[0].message == "Bingo" || result[0].message == "No Bingo"){
+            generateResultHTML(result[0],response.game);
+        }else{
+            alert(result[0].message);
         }
-        // Add new <td> elements with game data
-        gameStatRow.innerHTML += '<td>' + gameData.game_id + '</td>';
-        gameStatRow.innerHTML += '<td>' + gameData.stake + '</td>';
-        gameStatRow.innerHTML += '<td>' + gameData.number_of_players + '</td>';
-        gameStatRow.innerHTML += '<td>' + gameData.winner_price + '</td>';
-        disableButtons(selectedNumbers);
         
       },
       error: function(xhr, status, error) {
-        console.error("Failed to fetch selected numbers:", error);
+        console.error("Failed to check result", error);
       }
     });
   }
 
-  function fetchBingoCard(number) {
-    // Make an AJAX request to your Django view to fetch the updated list of selected numbers
-    $.ajax({
-      url:  "/get-bingo-card/?paramName=" + number,  // Replace with your Django view URL
-      type: "GET",
-      success: function(response) {
-        var bingoTable = JSON.parse(response);
-
-        // Generate HTML table from the received bingo table data
-        var tableHtml = "<table><tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>";
-        for (var i = 0; i < bingoTable.length; i++) {
-          tableHtml += "<tr>";
-          for (var j = 0; j < bingoTable[i].length; j++) {
-            if(i==2&&j==2){
-              tableHtml += "<td>" + "★" + "</td>";
-            }else{
-              tableHtml += "<td>" + bingoTable[i][j] + "</td>";
-            }
-          }
-          tableHtml += "</tr>";
-        }
-        tableHtml += "</table>";
-
-        // Display the HTML table
-        document.getElementById("bingo-table-container").innerHTML = tableHtml;
-      },
-      error: function(xhr, status, error) {
-        console.error("Failed to fetch card numbers:", error);
-      }
-    });
-  }
+  function generateResultHTML(cardResult,game) {
+    var resultContainer = document.getElementById("blur-background");
+    resultContainer.style.display = "block";
+    var resultDiv = document.createElement("div");
+    resultDiv.className = "result-container";
   
-  // Call the function to fetch selected numbers initially and then set up interval for real-time updates
-  fetchSelectedNumbers();
-  setInterval(fetchSelectedNumbers, 3000);
+    var innerDiv = document.createElement("div");
+    innerDiv.className = "result";
+    innerDiv.id = "result";
+  
+    if (cardResult.message === 'Bingo') {
+
+        if(cardResult.bonus >0){
+            bonus_c.style.display = "block";
+            bonus_t.innerText = cardResult.bonus + "Price Bonus";
+            let count = 0;
+            const intervalId = setInterval(() => {
+                launchConfetti();
+                count++;
+                if (count >= 3) {
+                    clearInterval(intervalId);
+                }
+            }, 1000); 
+        }
+
+        if(cardResult.free >0 && !cardResult.remaining_numbers){
+            free_c.style.display = "block";
+            free_t.innerText = "Card Number "+ cardResult.free;
+            let count = 0;
+            const intervalId = setInterval(() => {
+                launchConfetti();
+                count++;
+                if (count >= 3) {
+                    clearInterval(intervalId);
+                }
+            }, 1000); 
+        }
+
+        if(cardResult.bonus >0 && cardResult.free >0 && !cardResult.remaining_numbers){
+            bonus_c.style.left = '38%';
+            free_c.style.left = '62%';
+        }
+
+        // Handle Bingo message
+        // Create and append necessary HTML elements
+        var tableContainer = document.createElement("div");
+        tableContainer.className = "table-container";
+  
+        var p = document.createElement("p");
+        p.className = "bingo";
+        p.textContent = cardResult.card_name + " - " + cardResult.message;
+        tableContainer.appendChild(p);
+  
+        var table = document.createElement("table");
+        var tr = document.createElement("tr");
+        var thLetters = ["B", "I", "N", "G", "O"];
+        thLetters.forEach(function(letter) {
+            var th = document.createElement("th");
+            th.textContent = letter;
+            tr.appendChild(th);
+        });
+        table.appendChild(tr);
+        var counter = 1;
+        cardResult.card.forEach(function(row) {
+          var tr = document.createElement("tr");
+          row.forEach(function(cell) {
+              var td = document.createElement("td");
+              td.textContent = cell === 0 ? "★" : cell;
+              if (cardResult.winning_numbers.includes(counter)) {
+                if(cardResult.remaining_numbers){
+                    td.className = "miss-winning-row";
+                }else{
+                    td.className = "winning-row";
+                }
+              }else if (calledNumbers.includes(cell)) {
+                td.className = "remaining-number";
+              }
+              tr.appendChild(td);
+              counter++;
+          });
+          table.appendChild(tr);
+      });
+  
+      tableContainer.appendChild(table);
+      innerDiv.appendChild(tableContainer);
+      var closeButton = document.createElement("button");
+        closeButton.textContent = "Close";
+        closeButton.className = "buttons";
+        closeButton.addEventListener("click", function() {
+            // Functionality to close the container
+            bonus_c.style.display = "none";
+            free_c.style.display = "none";
+            while (resultContainer.firstChild) {
+                resultContainer.removeChild(resultContainer.firstChild);
+            }
+            // Remove the tableContainer itself from its parent node
+            resultContainer.style.display = "none";
+        });
+        tableContainer.appendChild(closeButton);
+
+        if(cardResult.remaining_numbers){
+            var blockButton = document.createElement("button");
+            blockButton.textContent = "Block";
+            blockButton.addEventListener("click", function() {
+                blockCard(cardResult.card_name,game);
+            });
+            blockButton.className = "buttons";
+            tableContainer.appendChild(blockButton);
+
+        }
+
+        // Appending buttons to the tableContainer
+  
+    } else {
+
+        // Handle No Bingo message
+        var tableContainer = document.createElement("div");
+        tableContainer.className = "table-container";
+  
+        var p = document.createElement("p");
+        p.className = "no-bingo";
+        p.textContent = cardResult.card_name + " - " + cardResult.message;
+        tableContainer.appendChild(p);
+  
+        var table = document.createElement("table");
+        var tr = document.createElement("tr");
+        var thLetters = ["B", "I", "N", "G", "O"];
+        thLetters.forEach(function(letter) {
+            var th = document.createElement("th");
+            th.textContent = letter;
+            tr.appendChild(th);
+        });
+        table.appendChild(tr);
+  
+        cardResult.card.forEach(function(row) {
+            var tr = document.createElement("tr");
+            row.forEach(function(cell) {
+                var td = document.createElement("td");
+                td.textContent = cell === 0 ? "★" : cell;
+                if (calledNumbers.includes(cell)) {
+                    td.className = "remaining-number";
+                }else if(cell==0){
+                  td.className = "remaining-number";
+                }
+                tr.appendChild(td);
+            });
+            table.appendChild(tr);
+        });
+  
+        tableContainer.appendChild(table);
+        innerDiv.appendChild(tableContainer);
+
+        var closeButton = document.createElement("button");
+        closeButton.textContent = "Close";
+        closeButton.className = "buttons";
+        closeButton.addEventListener("click", function() {
+            // Functionality to close the container
+            while (resultContainer.firstChild) {
+                resultContainer.removeChild(resultContainer.firstChild);
+            }
+            // Remove the tableContainer itself from its parent node
+            resultContainer.style.display = "none";
+        });
+
+        var blockButton = document.createElement("button");
+        blockButton.textContent = "Block";
+        blockButton.addEventListener("click", function() {
+            blockCard(cardResult.card_name,game);
+        });
+        blockButton.className = "buttons";
+
+        // Appending buttons to the tableContainer
+        tableContainer.appendChild(closeButton);
+        tableContainer.appendChild(blockButton);
+      
+  
+    }
+  
+    resultDiv.appendChild(innerDiv);
+    resultContainer.appendChild(resultDiv);
+  }
+function blockCard(card_id,game){
+$.ajax({
+    url:  "/block/",  // Replace with your Django view URL
+    type: "GET",
+    data: {
+      card: card_id,
+      game: game,
+      // Add more parameters as needed
+  },
+    success: function(response) {
+      // Disable buttons based on the received list of selected numbers
+      var resultContainer = document.getElementById("blur-background");
+      while (resultContainer.firstChild) {
+        resultContainer.removeChild(resultContainer.firstChild);
+    }
+    // Remove the tableContainer itself from its parent node
+    resultContainer.style.display = "none";
+      
+    },
+    error: function(xhr, status, error) {
+      alert("Failed to  Block user");
+    }
+  });
+}
+
+
+let shuffleInterval;
+// Variable to store the shuffle interval
+
+// Function to shuffle the class of numbers
+function shuffleNumbers() {
+    // Remove the "selected" class from all numbers
+    numberElements.forEach((numberElement) => {
+        numberElement.classList.remove('selected');
+        numberElement.classList.remove('blink');
+    });
+
+    // Randomly select one number and add the "selected" class to it
+    const randomIndex = Math.floor(Math.random() * numberElements.length);
+    const selectedNumber = numberElements[randomIndex];
+    const selectedNumber2 = numberElements[randomIndex - 3];
+    const selectedNumber3 = numberElements[randomIndex * 2];
+    const selectedNumber4 = numberElements[randomIndex * 3];
+    const selectedNumber5 = numberElements[randomIndex + 7];
+
+    // Adding the "selected" class to the selected numbers
+    if (selectedNumber) selectedNumber.classList.add('selected');
+    if (selectedNumber2) selectedNumber2.classList.add('selected');
+    if (selectedNumber3) selectedNumber3.classList.add('selected');
+    if (selectedNumber4) selectedNumber4.classList.add('selected');
+    if (selectedNumber5) selectedNumber5.classList.add('selected');
+}
+
+function shuffleBoard() {
+    const audioPlayer = document.getElementById("audioPlayer");
+    audioPlayer.loop = true; // Set audio to loop
+    audioPlayer.play();
+    
+    shuffleInterval = setInterval(shuffleNumbers, 115); // Shuffle every 115 milliseconds
+    calledNumbers.length = 0;
+    updateLastCalledNumbers();
+}
+
+function stopShuffleBoard() {
+    const audioPlayer = document.getElementById("audioPlayer");
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+    clearInterval(shuffleInterval); // Clear the shuffle interval
+    numberElements.forEach((numberElement) => {
+        numberElement.classList.remove('selected');
+    });
+}
+
+shuffle_btn.onclick = function () {
+    if (shuffle_btn.innerText === "SHUFFLE") {
+        shuffleBoard();
+        shuffle_btn.innerText = "STOP";
+    } else {
+        stopShuffleBoard();
+        shuffle_btn.innerText = "SHUFFLE";
+    }
+};
+function launchConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    const myConfetti = confetti.create(canvas, {
+        resize: true,
+        useWorker: true
+    });
+
+    // Launch confetti from the left-bottom
+    myConfetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { x: 0, y: 1 }
+    });
+
+    // Launch confetti from the right-bottom
+    myConfetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { x: 1, y: 1 }
+    });
+
+    // Launch confetti from behind the div
+    setTimeout(() => {
+        myConfetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+    }, 500);
+
+    // Repeat the confetti effect 3 times
+    for (let i = 1; i < 3; i++) {
+        setTimeout(() => {
+            myConfetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { x: 0, y: 1 }
+            });
+            myConfetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { x: 1, y: 1 }
+            });
+            setTimeout(() => {
+                myConfetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }, 500);
+        }, i * 2000);
+    }
+}
+
+var viewAllCalledButton = document.getElementById("viewAllCalledButton");
+var viewAllCalledModal = document.getElementById("viewAllCalledModal");
+var closeViewAllCalled = document.getElementById("closeViewAllCalled");
+var recentlyCalledNumbers = document.getElementById("recentlyCalledNumbers");
+
+// Function to display the recently called numbers in the pop-up modal
+function displayRecentlyCalledNumbers() {
+    recentlyCalledNumbers.innerHTML = "";
+    for (var i = 0; i < calledNumbers.length; i++) {
+        var number = calledNumbers[i];
+        var numberElement = document.createElement('div');
+        numberElement.classList.add('last-called-num-view-all');
+        var letter = 'B';
+        if(number <=15){
+            letter='B';
+        }
+        else if(number <=30){
+            letter='I';
+        }
+        else if(number <=45){
+            letter='N';
+        }
+        else if(number <=60){
+            letter='G';
+        }
+        else if(number <=75){
+            letter='O';
+        }
+        numberElement.textContent = letter+" "+number;
+        numberElement.setAttribute('data-letter', letter);
+        recentlyCalledNumbers.appendChild(numberElement);
+    }
+}
+
+// Add a click event listener to the "View All Called" button
+viewAllCalledButton.addEventListener("click", function () {
+    // Display the pop-up modal
+    viewAllCalledModal.style.display = "block";
+    var resultContainer = document.getElementById("blur-background");
+    resultContainer.style.display = "block";
+    // Call the function to display recently called numbers
+    displayRecentlyCalledNumbers();
 });
+
+// Add a click event listener to close the pop-up modal
+closeViewAllCalled.onclick = function () {
+    viewAllCalledModal.style.display = "none";
+    var resultContainer = document.getElementById("blur-background");
+    resultContainer.style.display = "none";
+};

@@ -1,0 +1,26 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href='https://unpkg.com/boxicons@2.0.9/css/boxicons.min.css' rel='stylesheet'>
+    <title>{% block title %}{% endblock %}</title>
+    <!-- Add your CSS files here -->
+    <link rel="stylesheet" href="{% static "game/css/base.css" %}">
+    {% block st %}{% endblock %}
+    <!-- Add your JavaScript files here -->
+</head>
+<body class="dark">
+    
+    {% block content %}
+    <!-- Content of the individual pages will be inserted here -->
+    {% endblock %}
+
+    <footer id="footer" style="display: none; position: fixed; left: 0; bottom: 0; width: 100%; text-align: center;">
+        <p>&copy; 2024 Dallol Technologies. All rights reserved.</p>
+    </footer>    
+    {% block s %}{% endblock %}
+</body>
+{% block JavaScript %}{% endblock JavaScript %}
+</html>

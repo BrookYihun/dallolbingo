@@ -1,324 +1,443 @@
-const gamediv = document.getElementById("gameid");
-const gameid = gamediv.innerText;
-const carddiv = document.getElementById("cardid");
-const cardid = carddiv.innerText; 
-var calledNumbers = [];
-var intervalId;
-const calledNumbersElement = document.getElementById("called-numbers");
-const lastCalledNumberElement = document.getElementById("last-called");
-var countindex  = 0;
-const serverUrl = 'dallolbingo.com';
-let speech = new SpeechSynthesisUtterance();
-let voices = [];
-const startButton = document.getElementById("start-game");
-const bingoButton = document.getElementById("bingoButton");
-let time = 60; // Initial time in seconds
-const timerDisplay = document.getElementById('timer');
-var timerInterval;
+const container = document.getElementById('container');
+const startButton = document.getElementById('start-button');
+const gameForm = document.getElementById('game-form');
+const numbers = [];
+let selectedNumbers=[];
+var other_selected = [];
+const moreNumber = document.getElementById('more');
+const clearbtn = document.getElementById('clear');
+const bonus = document.getElementById('bonus');
+const free = document.getElementById('free');
+const cashier = document.getElementById('cashier').innerText;
+var patterns = [];
 
-window.speechSynthesis.onvoiceschanged = () => {
-  voices = window.speechSynthesis.getVoices();
-  speech.voice = voices [0];
-};
+function setCookie(name, value, days) {
+    var expires = "";
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + encodeURIComponent(JSON.stringify(value)) + expires + "; path=/";
+  }
 
-speech.voice = voices[0];
-// Host Code
-
-let socket = null;
-
-// Function to start the game and create WebSocket server
-function connetToGame() {
-    // Generate a unique game ID
-
-    // Create WebSocket server
-    socket = new WebSocket(`wss://${serverUrl}/ws/game-socket/${gameid}/`);
-
-    // WebSocket event listeners
-    socket.onopen = function(event) {
-        console.log('WebSocket connection established.');
-    };
-
-    socket.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        // Handle messages received from players
-        if (data.type == 'game_start'){
-          startButton.disabled = true;
+  function getCookie(name) {
+    var nameEQ = name + "=";
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i];
+        while (cookie.charAt(0) == ' ') {
+            cookie = cookie.substring(1, cookie.length);
         }
-        if (data.type == 'random_number') {
-          randomNumbers = data.random_number;
-          calledNumbers.push(randomNumbers);
-          startButton.style.display = 'none';
-          bingoButton.style.display = 'inline';
-          updateCalledNumbersView();
+        if (cookie.indexOf(nameEQ) == 0) {
+            var cookieValue = cookie.substring(nameEQ.length, cookie.length);
+            return JSON.parse(decodeURIComponent(cookieValue));
         }
-        if(data.type == 'result'){
-          var message = data.data;
-          var result = message[0];
-          generateResultHTML(result);
+    }
+    return null;
+  }
+
+  function deleteCookie(cookieName) {
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  }
+
+clearbtn.addEventListener('click',()=>{
+    deleteCookie("selectedPlayers");
+    var divs = container.querySelectorAll(".box");
+    var boundary = 100;
+    var buttonText = moreNumber.textContent;
+    if(buttonText=="1-100"){
+        boundary = 200;
+    }
+    for (var i = 0; i <boundary; i++) {
+        if (selectedNumbers.includes(i+1)){
+            divs[i].classList.remove('selected');
+            if(cashier=="True"){
+                remove_player(i+1);
+            }
         }
-        if(data.type == 'timer_message'){
-          startButton.disabled = true;
-          var start_time = new Date(data.message);
-          var current_time = new Date();
-          var dif_time = (current_time.getTime() - start_time.getTime()) / 1000;
-          time = time - dif_time;
-          time = Math.floor(time);
-          if (time<0){
-            socket.close();
-            window.location.href = 'https://'+serverUrl+'/';
+    }
+    selectedNumbers=[];
+});
+
+moreNumber.addEventListener('click',()=>{
+    var buttonText = moreNumber.textContent;
+    if(buttonText=="100-200"){
+        moreNumber.textContent = "1-100";
+        add();
+    }else{
+        moreNumber.textContent = "100-200";
+        remove();
+    }
+    
+});
+
+function add(){
+      for (let i = 101; i <= 200; i++) {
+      const box = document.createElement('div');
+      box.textContent = i;
+      box.classList.add('box');
+
+      box.addEventListener('click', () => {
+          if (selectedNumbers.includes(i)) {
+              selectedNumbers = selectedNumbers.filter(num => num !== i);
+              box.classList.remove('selected');
+              if(cashier=="True"){
+                remove_player(i);
+              }
+          } else {
+              selectedNumbers.push(i);
+              box.classList.add('selected');
+              if(cashier=="True"){
+                add_player(i);
+              }
           }
-          timerInterval = setInterval(updateTimer, 1000);
-        }
-    };
+          startButton.disabled = selectedNumbers.length === 0;
+          updateTotalSelected();
+      });
 
-    socket.onclose = function(event) {
-        console.log('WebSocket connection closed.');
-    };
+      container.appendChild(box);
+  }
+}
+function remove(){
+    var divs = container.querySelectorAll(".box");
+    for (var i = 100; i <200; i++) {
+      container.removeChild(divs[i]);
+    }
+}
+
+// Handle custom select dropdown
+document.querySelector('.select-box').addEventListener('click', function () {
+    const selectBox = this.parentElement;
+    selectBox.classList.toggle('open'); // Toggle open class to show/hide options
+});
+
+// Handle selecting an option
+document.querySelectorAll('.option').forEach(option => {
+    option.addEventListener('click', function () {
+        // Toggle 'selected' class on the clicked option
+        this.classList.toggle('selected');
+
+        // Update the displayed selected patterns
+        const selectedPatterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.textContent).join(', ');
+        document.getElementById('selectedPatterns').textContent = selectedPatterns || 'Choose Patterns';
+        
+        // Optionally save the selected values to cookies or send to server
+        patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
+        
+    });
+});
+
+// Create number boxes
+
+
+// ... Your existing JavaScript ...
+
+// Inside the form submission event listener
+const game_id = document.getElementById('game').innerText;
+gameForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    if (selectedNumbers.length === 0) {
+        return;
+    }
+
+    // Create a hidden input element for each selected number
+    selectedNumbers.forEach(number => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'players';
+        input.value = number;
+        gameForm.appendChild(input);
+    });
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'game';
+    input.value = game_id;
+    gameForm.appendChild(input);
+    deleteCookie("Stake");
+    var v = document.getElementById("stake").value;
+    setCookie("Stake",v,7);
+
+    deleteCookie("Bonus");
+    var b = bonus.checked;
+    setCookie("Bonus",b,7);
+
+    deleteCookie("Free");
+    var f = free.checked;
+    setCookie("Free",f,7);
+    
+    deleteCookie("Patterns");
+    setCookie('Patterns', patterns, 7);
+
+    // Submit the form to the 'bingo' URL
+    gameForm.method = 'POST';
+    gameForm.submit();
+});
+
+function updateTotalSelected() {
+    deleteCookie("selectedPlayers");
+    setCookie("selectedPlayers",selectedNumbers,7);
+    document.getElementById('noplayer').value = selectedNumbers.length;
+    //document.getElementById('win').value = selectedNumbers.length * document.getElementById('stake').value;
+}
+
+function get_game_stat(){
+    $.ajax({
+        url:  "/get_game_stat/",  // Replace with your Django view URL
+        type: "GET",
+        data:{
+            game: game_id
+        },
+        success: function(response) {
+            if (response.message === 'None') {
+                
+            } else {
+                selectedNumbersStr = Array.isArray(response.main_selected) ? response.main_selected : [];
+                selectedNumbers = selectedNumbersStr.map(str => parseInt(str, 10));
+                update_view(response.selected_players);
+            }
+        },
+        error: function(xhr, status, error) {
+          alert("Failed to get data");
+        }
+      });
+}
+
+function update_view(players){
+    var boxes = document.querySelectorAll('.box');
+    other_selected = [];
+
+    boxes.forEach(function(box) {
+        var innerTextStr = box.innerText.trim(); // Get inner text and trim whitespace
+        var innerText = parseInt(innerTextStr, 10);
+        // Check if inner text is in the numbersToMatch array
+        if (selectedNumbers.includes(innerText)) {
+            // Do something with the matching box element, e.g., add a class
+            box.classList.add('selected');
+        }else {
+            box.className = "box";
+        }
+
+    });
+    var colornum = 1;
+    players.forEach(function(cashier){
+        var arrayStr = Array.isArray(cashier.selected_players) ? cashier.selected_players : [];
+        var array = arrayStr.map(str => parseInt(str, 10));
+        other_selected.push(...array);
+        var color = "color"+colornum;
+        colornum++;
+        for (let element of array) {
+            boxes[element-1].classList.add('selected');
+            boxes[element-1].classList.add(color);
+            boxes[element-1].classList.add('blured');
+        }
+
+    });
+
+    startButton.disabled = selectedNumbers.length === 0 && other_selected.length === 0;
+
 }
 
 window.onload = function() {
-  connetToGame();
-};
-
-startButton.addEventListener("click", function () {
-  const message = {
-    type: 'game_start'
-  }; 
-  socket.send(JSON.stringify(message));
-});
-
-bingoButton.addEventListener("click",function(){
-  const message = {
-    type: 'bingo',
-    card_id: cardid,
-    calledNumbers: calledNumbers
-  }; 
-  socket.send(JSON.stringify(message));
-});
-
-// Define a function to generate the HTML dynamically
-function generateResultHTML(cardResult) {
-  var resultContainer = document.getElementById("blur-background");
-  resultContainer.style.display = "block";
-  var resultDiv = document.createElement("div");
-  resultDiv.className = "result-container";
-
-  var innerDiv = document.createElement("div");
-  innerDiv.className = "result";
-  innerDiv.id = "result";
-
-  if (cardResult.message === 'Bingo') {
-      // Handle Bingo message
-      // Create and append necessary HTML elements
-      var tableContainer = document.createElement("div");
-      tableContainer.className = "table-container";
-
-      var p = document.createElement("p");
-      p.className = "bingo";
-      p.textContent = cardResult.card_name + " - " + cardResult.message;
-      tableContainer.appendChild(p);
-
-      var table = document.createElement("table");
-      var tr = document.createElement("tr");
-      var thLetters = ["B", "I", "N", "G", "O"];
-      thLetters.forEach(function(letter) {
-          var th = document.createElement("th");
-          th.textContent = letter;
-          tr.appendChild(th);
-      });
-      table.appendChild(tr);
-      var counter = 1;
-      cardResult.card.forEach(function(row) {
-        var tr = document.createElement("tr");
-        row.forEach(function(cell) {
-            var td = document.createElement("td");
-            td.textContent = cell === 0 ? "★" : cell;
-            if (cardResult.winning_numbers.includes(counter)) {
-                td.className = "winning-row";
-            }else if (cardResult.called_numbers.includes(cell)) {
-              td.className = "remaining-number";
+    for (let i = 1; i <= 100; i++) {
+        const box = document.createElement('div');
+        box.textContent = i;
+        box.classList.add('box');
+    
+        box.addEventListener('click', () => {
+            if (selectedNumbers.includes(i)) {
+                selectedNumbers = selectedNumbers.filter(num => num !== i);
+                box.classList.remove('selected');
+                if(cashier=="True"){
+                    remove_player(i);
+                }
+            } else {
+                selectedNumbers.push(i);
+                box.classList.add('selected');
+                if(cashier=="True"){
+                    add_player(i);
+                }
             }
-            tr.appendChild(td);
-            counter++;
+            startButton.disabled = selectedNumbers.length === 0;
+            updateTotalSelected();
         });
-        table.appendChild(tr);
+    
+        container.appendChild(box);
+    }
+
+    var stake = getCookie("Stake");
+    if(stake !=null){
+        document.getElementById("stake").value = stake;
+    }
+
+    var b = getCookie("Bonus");
+    if (b!=null){
+        bonus.checked = b;
+    }
+
+    var f = getCookie("Free");
+    if (f!=null){
+        free.checked = f;
+    }
+    
+    const selectedPatterns = getCookie("Patterns");
+    if (selectedPatterns) {
+        const selectedValues = getCookie('Patterns') || '[]';
+    
+        // Loop through all options and mark those that are selected
+        document.querySelectorAll('.option').forEach(option => {
+            if (selectedValues.includes(option.dataset.value)) {
+                option.classList.add('selected'); // Add 'selected' class to pre-selected options
+            }
+        });
+    
+        // Update the displayed selected patterns
+        const selected = selectedValues.map(value => {
+            return document.querySelector(`.option[data-value="${value}"]`).textContent;
+        }).join(', ');
+        
+        document.getElementById('selectedPatterns').textContent = selected || 'Choose Patterns';
+        
+         patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
+    }
+
+    if(cashier!="True"){
+        var selectedPlayersStr = getCookie("selectedPlayers");
+        if (selectedPlayersStr!=null){
+            var selectedPlayers = selectedPlayersStr.map(str => parseInt(str, 10));
+            selectedNumbers = selectedPlayers;
+            const containsInRange = selectedPlayers.some(function(number) {
+                return number > 100 && number <= 200;
+            });
+            startButton.disabled = selectedPlayers.length === 0;
+            var bound = 100;
+            if(containsInRange){
+                bound = 200;
+                moreNumber.textContent = "1-100";
+                for (let i = 101; i <= 200; i++) {
+                    const box = document.createElement('div');
+                    box.textContent = i;
+                    box.classList.add('box');
+              
+                    box.addEventListener('click', () => {
+                        if (selectedNumbers.includes(i)) {
+                            selectedNumbers = selectedNumbers.filter(num => num !== i);
+                            box.classList.remove('selected');
+                            if(cashier=="True"){
+                                remove_player(i);
+                            }
+                        } else {
+                            selectedNumbers.push(i);
+                            box.classList.add('selected');
+                            if(cashier=="True"){
+                                add_player(i);
+                            }
+                        }
+                        startButton.disabled = selectedNumbers.length === 0;
+                        updateTotalSelected();
+                    });
+              
+                    container.appendChild(box);
+                }
+            }
+            var divs = container.querySelectorAll(".box");
+            for (var i = 0; i < bound; i++) {
+                if (selectedPlayers.includes(i+1)){
+                    divs[i].classList.add('selected');
+
+                    if(cashier=="True"){
+                        add_player(i+1);
+                    }
+                }
+            }
+        }
+    }
+
+    const inputElement = document.getElementById('stake');
+
+    if(cashier=="True"){
+        inputElement.addEventListener('input', (event) => {
+            const currentValue = event.target.value;
+            // Call your function here
+            handleInputChange(currentValue);
+        });
+    
+        setInterval(get_game_stat, 1000);
+    }
+
+  };
+
+
+function handleInputChange(value) {
+    // Your logic here
+    var game = document.getElementById('game').innerHTML;
+    $.ajax({
+        url:  "/update_stake/",  // Replace with your Django view URL
+        type: "GET",
+        data: {
+            stake: value,
+            game: game,
+            // Add more parameters as needed
+        },
+        success: function(response) {
+            if (response.status === 'success') {
+                console.log(response.message);
+            } else if (response.status === 'failure' || response.status === 'error') {
+                alert(response.message);
+            }
+        },
+        error: function(xhr, status, error) {
+          alert("Failed to get data");
+        }
     });
+}
 
-    tableContainer.appendChild(table);
-    innerDiv.appendChild(tableContainer);
 
-    socket.close();
-    setTimeout(function() {
-      window.location.href = 'https://'+serverUrl+'/';
-      // Code to execute after 10 seconds
-  }, 10000);
-
-  } else {
-      // Handle No Bingo message
-      var tableContainer = document.createElement("div");
-      tableContainer.className = "table-container";
-
-      var p = document.createElement("p");
-      p.className = "no-bingo";
-      p.textContent = cardResult.card_name + " - " + cardResult.message;
-      tableContainer.appendChild(p);
-
-      var table = document.createElement("table");
-      var tr = document.createElement("tr");
-      var thLetters = ["B", "I", "N", "G", "O"];
-      thLetters.forEach(function(letter) {
-          var th = document.createElement("th");
-          th.textContent = letter;
-          tr.appendChild(th);
+  
+function remove_player(card){
+    var game = document.getElementById('game').innerHTML;
+    $.ajax({
+        url:  "/remove_player/",  // Replace with your Django view URL
+        type: "GET",
+        data: {
+            card: card,
+            game: game,
+            // Add more parameters as needed
+        },
+        success: function(response) {
+            if (response.status === 'success') {
+                console.log(response.message);
+            } else if (response.status === 'failure' || response.status === 'error') {
+                alert(response.message);
+            }
+        },
+        error: function(xhr, status, error) {
+          alert("Failed to get data");
+        }
       });
-      table.appendChild(tr);
+}
 
-      cardResult.card.forEach(function(row) {
-          var tr = document.createElement("tr");
-          row.forEach(function(cell) {
-              var td = document.createElement("td");
-              td.textContent = cell === 0 ? "★" : cell;
-              if (calledNumbers.includes(cell)) {
-                  td.className = "remaining-number";
-              }else if(cell==0){
-                td.className = "remaining-number";
-              }
-              tr.appendChild(td);
-          });
-          table.appendChild(tr);
+function add_player(card){
+    var game = document.getElementById('game').innerHTML;
+    $.ajax({
+        url:  "/add_player/",  // Replace with your Django view URL
+        type: "GET",
+        data: {
+            card: card,
+            game: game,
+            // Add more parameters as needed
+        },
+        success: function(response) {
+            if (response.status === 'success') {
+                console.log(response.message);
+            } else if (response.status === 'failure' || response.status === 'error') {
+                alert(response.message);
+            }
+        },
+        error: function(xhr, status, error) {
+          alert("Failed to get data");
+        }
       });
-
-      tableContainer.appendChild(table);
-      innerDiv.appendChild(tableContainer);
-
-      socket.close();
-      setTimeout(function() {
-        window.location.href = 'https://'+serverUrl+'/';
-        // Code to execute after 10 seconds
-    }, 10000);
-  }
-
-  resultDiv.appendChild(innerDiv);
-  resultContainer.appendChild(resultDiv);
 }
-
-function fetchBigoStat() {
-  // Make an AJAX request to your Django view to fetch the updated list of selected numbers
-  $.ajax({
-    url:  "/get-bingo-stat/?paramName=" + gameid,  // Replace with your Django view URL
-    type: "GET",
-    success: function(response) {
-      // Disable buttons based on the received list of selected numbers
-      var gameData = JSON.parse(response.game);
-
-      var gameStatRow = document.getElementById('game-stat');
-      // Remove existing <td> elements
-      while (gameStatRow.firstChild) {
-        gameStatRow.removeChild(gameStatRow.firstChild);
-      }
-      // Add new <td> elements with game data
-      gameStatRow.innerHTML += '<td>' + gameData.game_id + '</td>';
-      gameStatRow.innerHTML += '<td>' + gameData.stake + '</td>';
-      gameStatRow.innerHTML += '<td>' + gameData.number_of_players + '</td>';
-      gameStatRow.innerHTML += '<td>' + gameData.winner_price + '</td>';
-      
-    },
-    error: function(xhr, status, error) {
-      console.error("Failed to fetch bigo stat:", error);
-    }
-  });
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-
-  calledNumbers.forEach((number, index) => {
-    const numberElement = document.createElement("div");
-    numberElement.classList.add("called-number");
-    numberElement.textContent = number;
-    if (index == calledNumbers.length-1) {
-      numberElement.classList.add("recent-called");
-      lastCalledNumberElement.appendChild(numberElement);
-    }else{
-      calledNumbersElement.appendChild(numberElement);
-    }
-  });
-  fetchBigoStat();
-  setInterval(fetchBigoStat, 3000);
-});
-
-function updateCalledNumbersView() {
-  // Clear the existing numbers from the DOM
-  calledNumbersElement.innerHTML = "";
-  lastCalledNumberElement.innerHTML = "";
-
-  // Define the ranges and corresponding letters
-  const ranges = [
-    { min: 1, max: 15, letter: "B" },
-    { min: 16, max: 30, letter: "I" },
-    { min: 31, max: 45, letter: "N" },
-    { min: 46, max: 60, letter: "G" },
-    { min: 61, max: 75, letter: "O" }
-  ];
-
-  // Determine the number of recent numbers to display
-  const recentNumbersCount = Math.min(calledNumbers.length, 7);
-
-  // Rebuild the list based on the updated calledNumbers array
-  for (let i = 0; i < recentNumbersCount; i++) {
-    const number = calledNumbers[calledNumbers.length - recentNumbersCount + i];
-    const numberElement = document.createElement("div");
-    numberElement.classList.add("called-number");
-    
-    // Determine the corresponding letter based on the number's range
-    let letter = "";
-    for (const range of ranges) {
-      if (number >= range.min && number <= range.max) {
-        letter = range.letter;
-        break;
-      }
-    }
-    
-    // Add the letter and number to the element's text content
-    numberElement.textContent = letter + "-" + number;
-
-    // Add the appropriate class for the most recent called number
-    if (i == recentNumbersCount - 1) {
-      numberElement.classList.add("recent-called");
-      lastCalledNumberElement.appendChild(numberElement);
-      speech.text= numberElement.textContent;
-            window.speechSynthesis.speak(speech);
-    } else {
-      calledNumbersElement.appendChild(numberElement);
-    }
-  }
-}
-var bingo_numbers = document.getElementsByClassName("bingo-number");
-
-    // Add event listener to each button
-    for (var i = 0; i < bingo_numbers.length; i++) {
-        bingo_numbers[i].addEventListener("click", function() {
-            // Your event handling code here
-            if (this.classList.contains("highlighted")) {
-              this.classList.remove("highlighted");
-          } else {
-              this.classList.add("highlighted");
-          }
-        });
-    }
-    window.onbeforeunload = function() {
-      socket.close();
-    };
-
-function updateTimer() {
-  timerDisplay.innerText = time;
-  if (time > 0) {
-    time--;
-  } else {
-    clearInterval(timerInterval);
-     // You can replace this with any other action when the timer reaches 0
-  }
-}
-
-
-
-

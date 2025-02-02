@@ -1,0 +1,77 @@
+{% extends 'game/base/base.html' %}
+{% load static %}
+
+{% block title %}New Game{% endblock %}
+{% block st %}<link rel="stylesheet" href="{% static 'game/css/style2.css' %}">{% endblock st %}
+{% block s %}
+<script src="{% static 'game/js/script2.js' %}"></script>
+<script src="{% static 'game/js/jquery-3.7.1.min.js' %}"></script>
+{% endblock s %}
+{% block content %}
+<nav>
+    <h3 class="name">Dallol Bingo!</h3>
+    <h3 class="balance {% if acc > 1000 %}green{% elif acc > 500 %}yellow{% else %}red{% endif %}">
+      {% if acc > 1000 %}GOOD WALLET{% elif acc > 500 %}LOW WALLET{% else %}BAD WALLET{% endif %}
+    </h3>
+  </div>
+</nav>
+<div class="center-container">
+    <div class="top-bar">
+        <h2>New Game</h2>
+    </div>
+    <div id="game" style="display: none;">{{game}}</div>
+    <div id="cashier" style="display: none;">{{cashier}}</div>
+    <form id="game-form" action="{% url 'new_game' %}">{% csrf_token %}
+    <div class="input-section">
+      <div class="input-group">
+        <label for="win">Game: </label>
+        <input type="number" value = "{{counter.game_counter}}"id="game" readonly>
+      </div>
+      <div class="input-group">
+        <label for="stake">Bet Birr: </label>
+        <input type="number" id="stake" name="stake" min="{{acc.min_stake}}" max="10000" value="{{acc.min_stake}}" placeholder="">
+      </div>
+      <div class="input-group">
+        <label for="win">No. of players: </label>
+        <input type="number" id="noplayer" readonly>
+      </div>
+      <div class="input-group">
+        <label for="win">Win Birr: </label>
+        <input type="number" id="win" placeholder="0" readonly>
+      </div>
+      <div class="input-group">
+        <label for="win">Bonus: </label>
+        <input type="checkbox" name="bonus" id="bonus">
+      </div>
+      <div class="input-group">
+        <label for="win">Free Hit: </label>
+        <input type="checkbox" name="free" id="free">
+      </div>
+      <div class="input-group">
+        <div class="custom-select">
+            <div class="select-box">
+                <span id="selectedPatterns">Choose Patterns</span>
+            </div>
+            <div class="options-container">
+                <div class="option" data-value="1">Lines</div>
+                <div class="option" data-value="2">Diagonals</div>
+                <div class="option" data-value="3">Outside box</div>
+                <div class="option" data-value="4">Inside box</div>
+            </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="container" class="grid-container">
+        <!-- Boxes will be added here -->
+    </div>
+    
+    <input type="hidden" name="game" value="{{game.id}}">
+    <button type="submit" id="start-button" disabled>Start Game</button>
+    </form>
+    <div id="butns">
+        <button id="more">100-200</button>
+        <button id="clear">Clear</button>
+    </div>
+</div>
+{% endblock %}

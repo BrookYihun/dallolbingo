@@ -1,151 +1,151 @@
-{% load static%}
+{% extends 'game/base/base.html' %}
+{% load static %}
 
-<html>
+{% block title %}Home{% endblock %}
 
-<head>
-    <title>Enter Stake</title>
-    <link rel="stylesheet" href="{% static 'game/styles.css'%}">
-    <link rel="stylesheet" href="{% static 'game/normform/normform.min.css'%}">
-    <style>
-      .top-bar {
-        background-color: #fffdf6;
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add the shadow */
-        margin-bottom: 20px;
-      }
+{% block st %}<link rel="stylesheet" href="{% static 'game/css/styles.css' %}">{% endblock st %}
 
-      .logo{
-        color: #5397ff;
-        text-decoration: none;
-        font-size: 24px;
-        font-weight: bold;
-      }
+{% block s %}
+<script src="{% static 'game/js/script.js' %}"></script>
+<script src="{% static 'game/js/jquery-3.7.1.min.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+{% endblock s %}
 
-      .buttons {
-        display: flex;
-        align-items: center;
-      }
+{% block content %}
 
-      .buttons button,
-      .buttons a {
-        padding: 10px 20px;
-        margin: 0 5px;
-        border: none;
-        border-radius: 5px;
-        color: #fff;
-        cursor: pointer;
-        text-decoration: none;
-      }
+{% include "game/base/sidebar.html" %}
 
-      .buttons button {
-        background-color: #007bff;
-      }
-
-      .buttons a {
-        background-color: #dc3545;
-      }
-
-      .buttons button:hover,
-      .buttons a:hover {
-        background-color: #0056b3;
-      }
-      /* Center the form container vertically and horizontally */
-.forms-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Add padding and adjust width if needed */
-.demo-container {
-  padding: 20px; /* Adjust the width as needed */
-  background-color: #fff;
-}
-
-    </style>
-</head>
-<body>
-  <div class="top-bar">
-  <div class="logo">
-    <!-- Add your logo or site name here -->
-    Bingo
-  </div>
-  <div class="buttons">
-
-    <a href="{% url 'logout' %}" class="logout-button">Logout</a>
-  </div>
-</div>
-  <div class="forms-container">
-    <div class="demo-container">
-      <form action="{% url 'index' %}" method="POST" class="normform">
-        {% csrf_token %}
-        <fieldset>
-          <legend>New Game</legend>
-          <label for="text-input">Buy in price:</label>
-          <input type="number" id="text-input" name="stake" min="{{stake}}" max="200" value="{{stake}}" placeholder="" step="5">
-        </fieldset>
-        <div class="inline-button">
-          <input type="submit" value="Start New Game">
+<section id="content">
+    <nav>
+        <i class='bx bx-menu' ></i>
+        <div>
+            <h3 class="text-gradient"><span id="d">Dallol</span> Bin<span id="i">g</span>o!</h3>
         </div>
-      </form>
+        <div class="header">
+            <select name="lang" id="lang">
+                <option value="am">F-am</option>
+                <option value="mm">M-am</option>
+                <option value="om">om</option>
+                <option value="tg">tg</option>
+                <option value="ai">AI</option>
+            </select>
+            <input type="checkbox" id="switch-mode" hidden>
+            <label for="switch-mode" class="switch-mode"></label>
+            <i id="full-screen" class="bx bx-fullscreen"></i>
+        </div>    
+    </nav>
+
+    <main>
+
+        <div class="bingo-container"id="bingo-container" style="display: none;">
+            <div class="bingo-stat">
+                <h3 class="text-gradient big">BINGO</h3>
+                <div class="stat-box">
+                    GAME {{game.played}}
+                </div>
+                <div class="stat-box">
+                    STAKE {{game.stake}}
+                </div>
+                <div class="stat-box">
+                    WIN PRICE {{game.winner_price}}
+                </div>
+                <div id="total-called"class="stat-box">
+                    0 CALLED
+                </div>
+            </div>
+            <div class="bingo-panel">
+                <div class="bingo-num-container" id="bingo-num-container">
+                    {% for row in bingoRows %}
+                    <div class="bingo-row">
+                        <div class="letter" data-letter="{{row.letter}}">{{ row.letter }}</div>
+                        {% for number in row.numbers %}
+                        <div class="number" data-number="{{ number }}">{{ number }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div id="called-numbers" class="called-numbers" style="display: none;">
+                    <div class="last-called" id="last-called"><p id="last-letter"></p><p id="last-num"></p></div>
+                    <div class="last-called-numbers" id="lastCalledNumbers">
+                    </div>
+                    <div class="view-all">
+                        <button class="cutm-btn-2" id="viewAllCalledButton">view all</button>
+                    </div>
+                </div>
+            </div>
+            <div class="action-panel">
+                <div class="action-con">
+                    <div class="actions">
+                        <button id="start-auto-play" {% if game %}{% else %} style="display: none;" {% endif %}class="cutm-btn">START AUTO PLAY</button>
+                        <button id="call-next"  {% if game %}{% else %} style="display: none;" {% endif %} class="cutm-btn">CALL NEXT</button>
+                        
+                        <button id="finsh"  {% if game %}{% else %} style="display: none;" {% endif %} class="cutm-btn">FINSH</button>
+                        <a id="start-new-game" href="{% url 'new_game' %}" {% if game %} style="display: none;" {% endif %} class="cutm-btn">START NEW GAME</a>
+                        <audio id="audioPlayer" hidden>
+                            <source src="{% static "game/audio/shuffle.mp3" %}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <button id="shuffle" class="cutm-btn">SHUFFLE</button>
+                    </div>
+                    <div class="actions">
+                        <div class="form-group">
+                            <input type="range" id="callingSpeed" name="callingSpeed" min="3" max="12" value="6">
+                            <p id="callingSpeedTxt">Auto call 4 secounds</p>
+                        </div>
+                        <div id="game-id" style="display: none;">{{game.id}}</div>
+                        <input id="check-num" type="number" name="card" value="" min="1" max="200" placeholder="Enter cartela">
+                        <button id="check-btn" class="cutm-btn">CHECK</button>
+                    </div>
+                </div>
+                
+                <div class="winner">
+                    <div>
+                        <div>WIN MONEY</div>
+                        <div>{{game.winner_price}} Birr</div>
+                    </div>
+                    <img src="{% static "game/icon/money.png" %}" alt="">
+                </div>
+            </div>
+        </div>
+        <div class="blur-background" id="blur-background">
+            
+        </div>
+
+    </main>
+
+</section>
+
+<div class="loader-container" id="loader">
+    <div class="loader"></div>
+    <div class="loader"></div>
+    <div class="loader"></div>
+</div>
+
+<div class="congrats-banner" id="bonus_animation" style="display: none;">
+    <div class="congrats-text">
+        <span class="congrats-message">CONGRATULATIONS!</span>
+        <span class="congrats-bonnes" id="bonus_text">1st Prince Bonus</span> 
+        <span class="congrats-winner">Winner</span>
     </div>
+</div>
+
+<div class="congrats-banner" id="free_hit" style="display: none;">
+    <div class="congrats-text">
+        <span class="congrats-message">CONGRATULATIONS!</span>
+        <span class="congrats-bonnes" id="free_hit_text">Card number 51</span> 
+        <span class="congrats-winner">Next Game Free</span>
     </div>
-    <script type="text/javascript">
-    // Function to set a cookie
-    function setCookie(cookieName, cookieValue, expirationDays) {
-      const d = new Date();
-      d.setTime(d.getTime() + (expirationDays * 24 * 60 * 60 * 1000));
-      const expires = `expires=${d.toUTCString()}`;
-      document.cookie = `${cookieName}=${cookieValue}; ${expires}; path=/`;
-    }
+</div>
 
-    // Function to get the value of a cookie
-    function getCookie(cookieName) {
-      const name = `${cookieName}=`;
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        let cookie = cookies[i].trim();
-        if (cookie.indexOf(name) === 0) {
-          return cookie.substring(name.length, cookie.length);
-        }
-      }
-      return null;
-    }
+<div id="viewAllCalledModal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="closeViewAllCalled">&times;</span>
+        <h2>All Recently Called Numbers</h2>
+        <div id="recentlyCalledNumbers" class="recently-called-numbers"></div>
+    </div>
+</div>
 
-    // Function to delete a cookie
-    function deleteCookie(cookieName) {
-      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-    }
+<canvas id="confetti-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
 
-    // Function to initialize the stake input with the last stored value
-    function initializeStakeInput() {
-      const stakeInput = document.getElementById('text-input');
-      const lastStake = getCookie('lastStake');
-      if (lastStake !== null) {
-        stakeInput.value = lastStake;
-      }
-    }
 
-    // Event listener for the form submission
-    document.addEventListener('DOMContentLoaded', function () {
-      initializeStakeInput(); // Initialize the stake input when the page loads
-
-      const form = document.querySelector('.normform');
-      form.addEventListener('submit', function (event) {
-        // Get the stake value from the input
-        const stakeInput = document.getElementById('text-input');
-        const stakeValue = stakeInput.value;
-
-        // Set the stake value as a cookie that expires in 1 day
-        setCookie('lastStake', stakeValue, 1);
-
-        // Continue with the form submission
-      });
-    });
-  </script>
-  </body>
-</html>
+{% endblock %}

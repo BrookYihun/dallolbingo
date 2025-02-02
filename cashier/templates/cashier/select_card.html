@@ -1,0 +1,49 @@
+{% extends 'game/base/base.html' %}
+{% load static %}
+
+{% block title %}New Game{% endblock %}
+{% block st %}<link rel="stylesheet" href="{% static 'game/css/style2.css' %}">{% endblock st %}
+{% block s %}
+<script src="{% static 'cashier/script.js' %}"></script>
+<script src="{% static 'game/js/jquery-3.7.1.min.js' %}"></script>
+{% endblock s %}
+{% block content %}
+<div id="main" class="center-container">
+    <div class="top-bar">
+        <h2>New Game</h2>
+    </div>
+    <form id="game-form" action="{% url 'new_game' %}">{% csrf_token %}
+    <div class="input-section">
+
+      <div class="input-group">
+        <label for="stake">{{ cashier }}'s Balance: </label>
+        <input type="number" id="acc" readonly>
+      </div>
+      <div class="input-group">
+        <label for="win">Game: </label>
+        <input type="number" id="game" readonly>
+      </div>
+      <div class="input-group">
+        <label for="win">Number of players: </label>
+        <input type="number" id="noplayer" readonly>
+      </div>
+      <div class="input-group">
+        <label for="win">Collected: </label>
+        <input type="number" id="collected" readonly>
+      </div>
+    </div>
+    
+    <div id="container" class="grid-container">
+        <!-- Boxes will be added here -->
+    </div>
+    
+    </form>
+    <div id="butns">
+      <button id="more">100-200</button>
+      <button id="clear">Clear</button>
+  </div>
+</div>
+<div id="pay" style="display: none;">
+
+</div>
+{% endblock %}

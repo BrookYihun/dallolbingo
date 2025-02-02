@@ -1,217 +1,481 @@
-import base64
-from django.utils import timezone
+import random
+from datetime import datetime, timedelta
+from decimal import Decimal
 import json
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout
-from account.views import custom_csrf_protect
-
-import random
-
+from django.views.decorators.csrf import csrf_exempt
+from account.models import Account, UserGameCounter
+from agent.models import Agent
+from cashier.models import Cashier
+from game.models import Card, CashierGame, Game, UserGame
+from django.contrib.auth.models import User
 
 # Create your views here.
 @login_required
 def index(request):
-    if request.method == 'POST':
-        stake = int(request.POST.get("stake"))
-        user = request.user
-        from account.models import Account
-        from game.models import Game
-        acc = Account.objects.get(user=user)
-        if int(acc.wallet) >= stake:
-            game = Game.objects.filter(stake=stake,played="Created").order_by('-id').last()
-            game2 = Game.objects.filter(stake=stake,played="Started").order_by('-id').last()
-            if game2 is not None:
-                elapsed_time = (timezone.now() - game2.started_at).total_seconds()
-                if elapsed_time < 60:
-                    return redirect (pick_card,game2.id)
-            if game is not None:
-                return redirect (pick_card,game.id)
-            new_game = Game.objects.create()
-            new_game.stake = int(stake)
-            new_game.save_random_numbers(generate_random_numbers())
-            new_game.save()
-            return redirect (pick_card,new_game.id)
-        else:
-          return render (request,'game/index.html')
+    if request.user.is_superuser:
+        return redirect('super_admin')
+    try:
+        agent = Agent.objects.get(user=request.user)
+        return redirect('agent_index')
+    except Agent.DoesNotExist:
+        pass
+    numbers = range(1, 76)
+    letters = ['B', 'I', 'N', 'G', 'O']
+    numbers_per_row = 15
+    bingo_rows = []
+    for letter in letters:
+        row_numbers = numbers[:numbers_per_row]
+        numbers = numbers[numbers_per_row:]
+        bingo_rows.append({'letter': letter, 'numbers': row_numbers})
 
-    return render (request,'game/index.html')
+    context = {'bingoRows': bingo_rows}
+    return render(request,'game/index.html',context)
 
-def telegram(request):
-    token = request.GET.get("token")
-    stake = int(request.GET.get("stake"))
-    dec_token = base64.b64decode(token).decode("utf-8")
-    user_parts = dec_token.split(':')
-    user = authenticate(request, username=user_parts[0], password=user_parts[1])
-    if user is not None and user.is_authenticated:
-        login(request, user)
-        from account.models import Account
-        acc = Account.objects.get(user=user)
-        from django.db.models import Q
-        from game.models import Game
-        if int(acc.wallet) >= stake:
-            game = Game.objects.filter(stake=stake,played="Created").order_by('-id').last()
-            game2 = Game.objects.filter(stake=stake,played="Started").order_by('-id').last()
-            if game2 is not None:
-                elapsed_time = (timezone.now() - game2.started_at).total_seconds()
-                if elapsed_time < 60:
-                    return redirect (pick_card,game2.id)
-            if game is not None:
-                return redirect (pick_card,game.id)
-            new_game = Game.objects.create()
-            new_game.stake = int(stake)
-            new_game.save_random_numbers(generate_random_numbers())
-            new_game.save()
-            return redirect (pick_card,new_game.id)
-        return HttpResponse("First Deposit to wallet via Telegram")
-    else:
-        return HttpResponse("First Register via Telegram")
-
+@csrf_exempt
 @login_required
-def pick_card(request,gameid):
-    from game.models import Game
-    game = Game.objects.get(id=int(gameid))
-    from account.models import Account
-    acc = Account.objects.get(user=request.user)
-    if game.played == 'Playing' or game.played == 'Close':
-        return redirect(index)
-    players = json.loads(game.playerCard)
-    if request.user.id in [player_card['user'] for player_card in players]:
-        card_id = next(player['card'] for player in players if player['user'] == request.user.id)
-        return redirect(bingo,card_id,game.id)
+def new_game_view(request):
     if request.method == 'POST':
         try:
-            cardid = int(request.POST.get("selected_number"))
-            time = timezone.now()
+            user = request.user
+            acc = Account.objects.get(user=user)
+
+            if acc.prepaid and acc.account<0:
+                return redirect('index')
+            
+            selected_numbers = request.POST.getlist('players')
+            players_selected = [int(num) for num in selected_numbers]
+            cut_per = acc.cut_percentage
+            bonus = request.POST.get('bonus') == 'on'
+            free = request.POST.get('free') == 'on'
+            stake = request.POST.get('stake')
+            game_id = int(request.POST.get('game'))
+            game = Game.objects.get(id=game_id)
+            game.stake = int(stake)
+            game.played = 'PLAYING'
+            game.bonus = bonus
+            game.free = free
+            game.save()
+            user_games = UserGame.objects.filter(user=request.user)
+            user_game_count = user_games.count()
+            if not user_games.filter(game=game).exists():
+                user_game = UserGame.objects.create(game=game, user=request.user, game_number=user_game_count + 1)
+                user_game.save()
+                user_game_counter = UserGameCounter.objects.get(user=request.user)
+                user_game_counter.increment_game_counter()
+                user_game_counter.save()
+            time = datetime.now()
             formatted_time = time.strftime('%Y-%m-%d %H:%M:%S')
-            if cardid not in [player_card['card'] for player_card in players]:
-                new_player = {'time': formatted_time, 'card': cardid,'user':request.user.id}
-                players.append(new_player)
-                game.numberofplayers = game.numberofplayers + 1
-                acc.wallet = float(acc.wallet) - float(game.stake)
-                acc.save()
+            players = []
+            if game.playerCard:
+                players = json.loads(game.playerCard)
+            cashiers = Cashier.objects.filter(shop=acc)
+            if cashiers.count() > 1:
+                selected_players = []
+
+                for cashier in cashiers:
+                    cashier_game = get_object_or_404(CashierGame, user=cashier.user, game_id=game_id)
+                    if cashier_game:
+                        card_numbers = [int(card) for card in cashier_game.get_card_numbers()]
+                        selected_players.extend(card_numbers)
+                        cashier_game.collected = float(len(cashier_game.get_card_numbers())) * float(stake)
+                        cashier.increment_balance(cashier_game.collected)
+                        cashier.save()
+                        cashier_game.save()
+
+
+                for player in selected_players:
+                    if player not in [player_card['card'] for player_card in players]:
+                        new_player = {'time': formatted_time, 'card': player}
+                        players.append(new_player)
+                        game.numberofplayers = game.numberofplayers + 1
+                
+                paid = False
+                winner = float(game.stake) * float(game.numberofplayers)
+                if winner > acc.cut_bouldery:
+                    winner = winner - (winner * float(cut_per))
+                for cashier in cashiers:
+                    cashier_game = get_object_or_404(CashierGame, user=cashier.user, game_id=game_id)
+                    if cashier_game:
+                        if cashier.balance > winner:
+                            paid = True
+                            cashier.decrement_balance(winner)
+                            cashier_game.pied = winner
+                            cashier_game.save()
+                            break
+                
+                if not paid:
+                    for cashier in cashiers:
+                        cashier_game = get_object_or_404(CashierGame, user=cashier.user, game_id=game_id)
+                        if cashier_game:
+                            if cashier.balance <= winner:
+                                winner -= float(cashier.balance)
+                                cashier_game.pied = cashier.balance
+                                cashier.decrement_balance(cashier.balance)
+                                cashier_game.save()
+                            elif cashier.balance > winner:
+                                cashier.decrement_balance(winner)
+                                cashier_game.pied = winner
+                                cashier_game.save()
+                                winner = 0
+                                break
+
             else:
-                return render (request,'game/select_card.html',{'gameid':gameid,'message':"Card Taken Pick Again"})
+                for player in players_selected:
+                    if player not in [player_card['card'] for player_card in players]:
+                        new_player = {'time': formatted_time, 'card': player}
+                        players.append(new_player)
+                        game.numberofplayers = game.numberofplayers + 1
 
             game.playerCard = json.dumps(players)
             winner = float(game.stake) * float(game.numberofplayers)
-            if winner > 100:
-                game.admin_cut = winner * 0.2
-                game.winner_price =  winner - game.admin_cut
+            if winner > acc.cut_bouldery:
+                game.shop_cut = float(winner) * float(cut_per)
+                game.winner_price =  winner - game.shop_cut
+                game.admin_cut = (float(winner) * float(cut_per)) * float(acc.percentage)
+
             else:
+                game.shop_cut = 0
                 game.winner_price = winner
                 game.admin_cut = 0
 
+            if winner > acc.cut_bouldery:
+                acc.account= float(acc.account) - float(game.admin_cut)
+                acc.total_earning += Decimal(str(game.shop_cut))
+                acc.net_earning = acc.net_earning + Decimal(str(game.shop_cut - game.admin_cut))
+                acc.save()
+            if game.free and game.numberofplayers >= 30:
+                game.winner_price = float(game.winner_price) - float(game.stake)
             game.save()
-            return redirect (bingo,cardid,game.id)
+            bingo_cards = Card.objects.exclude(id__in=[p['card'] for p in players])
+            user_game_counter = UserGameCounter.objects.get(user=request.user)
+            numbers = range(1, 76)
+            letters = ['B', 'I', 'N', 'G', 'O']
+            numbers_per_row = 15
+            bingo_rows = []
+            for letter in letters:
+                row_numbers = numbers[:numbers_per_row]
+                numbers = numbers[numbers_per_row:]
+                bingo_rows.append({'letter': letter, 'numbers': row_numbers})
+            context = {'bingo_cards': bingo_cards, 'game': game,'game_counter':user_game_counter, 'players': players,'bingoRows': bingo_rows}
+            return render(request,'game/index.html',context)
         except ValueError:
             return HttpResponse('Error')
-    return render (request,'game/select_card.html',{'gameid':gameid,'acc':acc},)
+    acc = Account.objects.get(user= request.user)
+    game = Game.objects.create()
+    today_game_counter = UserGameCounter.objects.get(user=request.user)
+    game.stake = 20
+    game.save()
+    cashiers = Cashier.objects.filter(shop=acc)
+    is_cashier = False
+    if cashiers.count() > 1:
+        is_cashier = True
+        for cashier in cashiers:
+            cashier_game = CashierGame.objects.create(user=cashier.user,game=game)
+            cashier_game.save()
+            
+    return render(request, 'game/new_game.html',{'counter':today_game_counter,'acc':acc,'game':game.id,'cashier':is_cashier,'cashiers':cashiers})
 
 @login_required
-def get_selected_numbers(request):
-    gameid = request.GET.get('paramName', '')
-    from game.models import Game
-    game = Game.objects.get(id=int(gameid))
-    cards = json.loads(game.playerCard)
-    # Extract only the card numbers
-    card_numbers = [card['card'] for card in cards]
-
-    # Prepare game data
-    game_data = {
-        "game_id": game.id,
-        "stake": str(game.stake),  # Convert Decimal to string
-        "number_of_players": game.numberofplayers,
-        "winner_price": str(game.winner_price),
-        "time_started":str(0)   # Convert Decimal to string
-    }
-
-    if game.played == "Started":
-        game_data = {
-            "game_id": game.id,
-            "stake": str(game.stake),  # Convert Decimal to string
-            "number_of_players": game.numberofplayers,
-            "winner_price": str(game.winner_price),
-            "time_started":str(game.started_at)  # Convert Decimal to string
-        }
-
-    # Convert game data to JSON format using DjangoJSONEncoder
-    json_game_data = json.dumps(game_data)
-
-    # Construct the response data
-    response_data = {
-        'selectedNumbers': card_numbers,
-        'game': json_game_data
-    }
-    return JsonResponse(response_data)
-
-@login_required
-def get_bingo_stat(request):
-    gameid = request.GET.get('paramName', '')
-    from game.models import Game
-    game = Game.objects.get(id=int(gameid))
-
-    # Prepare game data
-    game_data = {
-        "game_id": game.id,
-        "stake": str(game.stake),  # Convert Decimal to string
-        "number_of_players": game.numberofplayers,
-        "winner_price": str(game.winner_price)  # Convert Decimal to string
-    }
-
-    # Convert game data to JSON format using DjangoJSONEncoder
-    json_game_data = json.dumps(game_data)
-
-    # Construct the response data
-    response_data = {
-        'game': json_game_data
-    }
-    return JsonResponse(response_data)
-
-@login_required
-def get_bingo_card(request):
-    from game.models import Card
-    cardnumber = request.GET.get('paramName', '')
-    card = Card.objects.get(id=int(cardnumber))
-    card_numbers = json.loads(card.numbers)
-    bingo_table_json = json.dumps(card_numbers)
-    return JsonResponse(bingo_table_json,safe=False)
-
-@login_required
-def bingo(request,cardid,gameid):
-    from game.models import Card, Game
-    game = Game.objects.get(id=int(gameid))
-    from account.models import Account
-    if game:
+def game_stat(request):
+    gameId = request.GET.get('game')
+    try:
         acc = Account.objects.get(user=request.user)
-        if game.played == 'Playing' or game.played == 'Close':
-            return redirect(index)
-        players = json.loads(game.playerCard)
-        if not request.user.id in [player_card['user'] for player_card in players]:
-            return redirect(index)
-        if not cardid in [player_card['card'] for player_card in players]:
-            if request.user.id in [player_card['user'] for player_card in players]:
-                card_id_h = None
-                for player in players:
-                    if player['user']==request.user.id:
-                        card_id_h = player['card']
-                if card_id_h:
-                    return redirect(bingo,card_id_h,gameid)
-            return redirect(index)
-        card = Card.objects.get(id=cardid)
-        card_numbers = json.loads(card.numbers)
-        return render (request,'game/bingo.html',{"card":card_numbers,"gameid":gameid,"cardid":cardid,'acc':acc})
-    return redirect(index)
+        cashiers = Cashier.objects.filter(shop=acc)
+        if cashiers is not None:
+            selected_players = []
+            main_selected_players = []
+            
+            for cashier in cashiers:
+                cashier_game = get_object_or_404(CashierGame, user=cashier.user, game_id=gameId)
+                cashier_main = request.user.username + "_main_cashier"
+                if cashier_game and cashier.user.username != cashier_main:
+                    selected_players.extend(cashier_game.get_card_numbers())
+                else:
+                    main_selected_players.extend(cashier_game.get_card_numbers())
+            
+            cashier_game = CashierGame.objects.filter(game_id =gameId)
+            cashier_stat_list = [{'name': cashier.user.username, 'selected_players': cashier.get_card_numbers()} for cashier in cashier_game if cashier.user.username != cashier_main]
 
-
-def generate_random_numbers():
-    # Generate a list of numbers from 1 to 75
-    numbers = list(range(1, 76))
+            
+            context = {'selected_players':cashier_stat_list,'main_selected':main_selected_players}
+            return JsonResponse(context)
+        context = {'message': 'None'}
+        return JsonResponse(context)
+    except Exception as e:
+        print(e)  # Log the exception (optional)
+        context = {'message': 'None'}
+        return JsonResponse(context)
     
-    # Shuffle the list to randomize the order
-    random.shuffle(numbers)
+@login_required
+def remove_player(request):
+    card_id = request.GET.get('card')
+    gameId = request.GET.get('game')
+    user = request.user
+    try:
+        cashier_user = User.objects.get(username=user.username+"_main_cashier")
+        # Retrieve the CashierGame object
+        cashier_game = get_object_or_404(CashierGame, user=cashier_user, game_id=gameId)
+        
+        # Load the selected_players JSON
+        selected_players = json.loads(cashier_game.selected_players)
+        
+        # Check if the player exists and remove it
+        if card_id in selected_players:
+            selected_players.remove(card_id)
+            
+            # Update the JSON field
+            cashier_game.selected_players = json.dumps(selected_players)
+            cashier_game.save()
+            
+            return JsonResponse({'status': 'success', 'message': 'Player removed successfully.'})
+        else:
+            return JsonResponse({'status': 'failure', 'message': 'Player not found in selected_players.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required
+def add_player(request):
+    card_id = request.GET.get('card')
+    gameId = request.GET.get('game')
+    user = request.user
+    try:
+        cashier_user = User.objects.get(username=user.username+"_main_cashier")
+
+        # Retrieve the CashierGame object
+        cashier_game = get_object_or_404(CashierGame, user=cashier_user, game_id=gameId)
+        
+        # Load the selected_players JSON
+        selected_players = json.loads(cashier_game.selected_players)
+        
+        # Check if the player does not exist and add it
+        if card_id not in selected_players:
+            selected_players.append(card_id)
+            
+            # Update the JSON field
+            cashier_game.selected_players = json.dumps(selected_players)
+            cashier_game.save()
+            
+            return JsonResponse({'status': 'success', 'message': 'Player added successfully.'})
+        else:
+            return JsonResponse({'status': 'failure', 'message': 'Player already in selected_players.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
     
-    return numbers
+@login_required
+def update_stake(request):
+    game_id = request.GET.get('game')
+    stake = request.GET.get('stake')
+    try:
+        game = Game.objects.get(id=game_id)
+        game.stake = int(stake)
+        game.save()
+        return JsonResponse({'status': 'success', 'message': 'Stake Updated.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required
+def check_winner_view(request):
+    card_id = request.GET.get('card')
+    called_numbers_str = request.GET.get('called')
+    patterns_str = request.GET.get('patterns',[])
+
+    # Parse the string representation of the list into an actual list
+    called_numbers = json.loads(called_numbers_str)
+    gameId = request.GET.get('game')
+    patterns = json.loads(patterns_str)
+    if not called_numbers:
+        context = {'called': called_numbers, 'message': 'No numbers called yet'}
+        return JsonResponse(context)
+    
+    game = Game.objects.get(id=gameId)
+    players = json.loads(game.playerCard)
+    player_cards = [entry['card'] for entry in players]
+    card_found = int(card_id) in player_cards
+    game.total_calls = len(called_numbers)
+    game.save()
+
+    result = []
+    if card_found:
+        card = Card.objects.get(id=card_id)
+        numbers = card.numbers
+        winning_numbers,remaining_number = has_bingo(numbers, called_numbers,patterns)
+        if len(winning_numbers)>0:
+
+            if not remaining_number:
+                winners = []
+                if game.winners:
+                    winners = json.loads(game.winners)
+                if card.id not in winners:
+                    # Append card.id if it is not in the list
+                    winners.append(card.id)
+                game.winners = json.dumps(winners)
+
+            if game.bonus and not remaining_number:
+                if len(called_numbers) == 4:
+                    game.bonus_payed = 1
+                elif len(called_numbers) == 5:
+                    game.bonus_payed = 2
+                elif len(called_numbers) == 6:
+                    game.bonus_payed = 3
+                elif len(called_numbers) == 7:
+                    game.bonus_payed = 4
+                elif len(called_numbers) == 8:
+                    game.bonus_payed = 5
+                elif len(called_numbers) == 9:
+                    game.bonus_payed = 6
+                elif len(called_numbers) == 10:
+                    game.bonus_payed = 7
+            
+            if game.free and game.free_hit == 0 and game.numberofplayers >= 30:
+                players = json.loads(game.playerCard)
+                cards = [player_card['card'] for player_card in players]
+                filtered_cards = [c for c in cards if c !=int(card_id) ]
+                # game.shop_cut -= Decimal(game.stake)
+                game.free_hit = random.choice(filtered_cards)
+                cashierGame = CashierGame.objects.filter(game=game)
+                # for cas in cashierGame:
+                #     card_numbers = [int(card) for card in cas.get_card_numbers()]
+                #     if int(game.free_hit) in card_numbers:
+                #         cashier = Cashier.objects.get(user=cas.user)
+                #         cas.collected -= Decimal(game.stake)
+                #         cas.save()
+                #         cashier.decrement_balance(game.stake)
+                game.save()
+
+            result.append({'card_name': card.id, 'message': 'Bingo','free':game.free_hit, 'bonus':game.bonus_payed, 'winning_card': numbers, 'remaining_numbers': remaining_number,'called_numbers': called_numbers,'winning_numbers':winning_numbers,'card':numbers})
+            
+        else:
+            result.append({'card_name': card.id, 'message': 'No Bingo','card':numbers})
+    else:
+        result.append({'card_name': card_id, 'message': 'Not a Player'})
+
+    game.save()
+    context = {'called': called_numbers, 'result': result,'game':gameId}
+    return JsonResponse(context)
+
+from collections import OrderedDict
+
+def has_bingo(card, called_numbers,patterns):
+
+    called_numbers = list(OrderedDict.fromkeys(map(int, called_numbers)))
+
+    called_numbers.append(0)  # Since we can't use add, we append 0 if it isn't already present
+    if 0 not in called_numbers:
+        called_numbers.append(0)
+        
+    if not patterns:
+        patterns = ["1","2","3"]
+    
+    winning_numbers = []
+    
+    if "2" in patterns:
+        # Check diagonals
+        diagonal2 = [card[i][i] for i in range(len(card))]
+        diagonal1 = [card[i][len(card) - 1 - i] for i in range(len(card))]
+        if all(number in called_numbers for number in diagonal2):
+            winning_numbers.extend([1, 7, 13, 19, 25])
+        if all(number in called_numbers for number in diagonal1):
+            winning_numbers.extend([5, 9, 13, 17, 21])
+            
+    if "1" in patterns:
+        # Check rows
+        for row_index, row in enumerate(card):
+            if all(number in called_numbers for number in row):
+                winning_numbers.extend([(row_index * 5) + i for i in range(1, 6)])
+    
+        # Check columns
+        for col in range(len(card[0])):
+            if all(card[row][col] in called_numbers for row in range(len(card))):
+                winning_columns = col + 1
+                winning_numbers.extend([winning_columns + 5 * i for i in range(5)])
+    
+    if "3" in patterns:
+        corner_count = 0
+        # Check the top-left corner (1, 1)
+        if card[0][0] in called_numbers:
+            corner_count += 1
+    
+        # Check the top-right corner (1, 5)
+        if card[0][4] in called_numbers:
+            corner_count += 1
+    
+        # Check the bottom-left corner (5, 1)
+        if card[4][0] in called_numbers:
+            corner_count += 1
+    
+        # Check the bottom-right corner (5, 5)
+        if card[4][4] in called_numbers:
+            corner_count += 1
+    
+        if corner_count == 4:
+            winning_numbers.extend([1, 5, 21, 25])
+            
+    if "4" in patterns:        
+        inner_corner_count = 0
+        # Check the top-left corner (1, 1)
+        if card[1][1] in called_numbers:
+            inner_corner_count += 1
+    
+        # Check the top-right corner (1, 5)
+        if card[1][3] in called_numbers:
+            inner_corner_count += 1
+    
+        # Check the bottom-left corner (5, 1)
+        if card[3][1] in called_numbers:
+            inner_corner_count += 1
+    
+        # Check the bottom-right corner (5, 5)
+        if card[3][3] in called_numbers:
+            inner_corner_count += 1
+    
+        if inner_corner_count == 4:
+            winning_numbers.extend([7, 9, 17, 19])
+    
+    remaining_number = True
+    if 0 in called_numbers:
+        called_numbers.remove(0)
+    max_called = called_numbers[-1] if called_numbers else None
+
+    for number in winning_numbers:
+        row = (number - 1) // 5
+        col = (number - 1) % 5
+        if card[row][col] == max_called:
+            remaining_number = False
+            break
+    
+
+    return winning_numbers, remaining_number
 
 
+
+@login_required
+def block_view(request):
+    card_id = request.GET.get('card')
+    gameId = request.GET.get('game')
+    last_game = Game.objects.get(id=gameId)
+    players = json.loads(last_game.playerCard)
+    updated_list = [item for item in players if int(item['card']) != int(card_id)]
+    last_game.playerCard = json.dumps(updated_list)
+    last_game.numberofplayers = len(updated_list)
+    last_game.save()
+    context ={'message':"Blocked"}
+    return JsonResponse(context)
+
+@login_required
+def finish_view(request):
+    gameId = request.GET.get('game')
+    called_numbers_str = request.GET.get('called')
+
+    # Parse the string representation of the list into an actual list
+    called_numbers = json.loads(called_numbers_str)
+
+    game = Game.objects.get(id=gameId)
+    game.total_calls = len(called_numbers)
+    game.played = 'FINISHED'
+    game.save()
+
+    context = {'message': "FINISHED"}
+    return JsonResponse(context)

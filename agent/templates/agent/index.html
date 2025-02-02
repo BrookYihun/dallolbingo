@@ -1,0 +1,180 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'agent/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'game/css/lightpick.css' %}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
+<script src="{% static "game/js/lightpick.js" %}"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <title>Home</title>
+</head>
+<body>
+    <div class="header">
+      <div class="user-info">
+          Hello, {{agent.name}}
+      </div>
+      <div class="tittle">
+        <h3>DALLOL BINGO</h3>
+      </div>
+      <div class="navbar">
+        <ul>
+              <li><a href="{% url 'agent_index' %}">Home</a></li>
+              <li><a href="{% url 'logout' %}" class="logout-button">Logout</a></li>
+          </ul>
+      </div>
+    </div>
+    <div id="main" class="container">
+        <div id="stats"class="stats">
+            <div class="stat-box">
+                <h3>Balance</h3>
+                <p>{{agent.account}}</p>
+            </div>
+            <div class="stat-box">
+                <h3>Total Shops</h3>
+                <p>{{num_shops}}</p>
+            </div>
+            <div class="stat-box">
+                <h3>Total Earning</h3>
+                <p>{{total_earning}}</p>
+            </div>
+            <div class="stat-box">
+                <h3>Today Earning</h3>
+                <p>{{today_earning}}</p>
+            </div>
+        </div>
+        <form class="nav-form" action="" method="post" id="filterForm">
+            <input style="width: auto; margin-right: 20px;" class="input-date" type="text" id="datepicker" name="datefilter"/>
+            <input class="logout-button" type="submit" name="filter" value="Filter">
+        </form>
+        <div id="paginationButtons">
+            <button class="pagination-button" id="add-new-shop-btn">Add New Shop</button>
+        </div>
+        <table id="gameTable">
+          <thead class="text-muted">
+            <tr>
+                <th>Shop Name</th>
+                <th>Percentage</th>
+                <th>Prepaid</th>
+                <th>Account</th>
+                <th>Total Games</th>
+                <th>Total Earning</th>
+                <th>Today Game</th>
+                <th>Today Earning</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+            <tbody>
+
+            </tbody>
+        </table>
+        <table id="hiddenData" style="display: none;">
+          <tbody>
+
+          </tbody>
+        </table>
+        <div id="paginationButtons">
+            <button id="prevButton" class="pagination-button">Previous</button>
+            <button id="nextButton" class="pagination-button">Next</button>
+        </div>
+    </div>
+    <div class="blur-background" id="blur-background">
+        <div class="blur-container">
+            <div class="form-layout" id="add-new-shop" style="display: none;">
+                <h3>Create New Shop</h3>
+                <form id="add-new-shop-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="user_name">User Name:</label>
+                        <input type="text" name="user_name"  required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="text" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone_number">Phone Number:</label>
+                        <input type="text" name="phone_number" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="percentage">Percentage:</label>
+                        <input type="number" step="0.01" name="percentage" min="0.1" max="1.0" required>
+                    </div>
+                    {% if agent.privilege %}
+                    <div class="form-group">
+                        <label for="prepaid">Prepaid:</label>
+                        <input type="checkbox" name="prepaid"  >
+                    </div>
+                    <div class="form-group">
+                        <label for="percentage">Cut Percentage:</label>
+                        <input type="number" step="0.01" name="cut_percentage"  value = "0.2" min="0.15" max="0.5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="min_stake">Cut Boundary:</label>
+                        <input type="number" name="cut_boundary" value="100" step="10" min="30" max="100" required>
+                    </div>
+                    {% endif %}
+                    <div class="form-group">
+                        <label for="min_stake">Min stake:</label>
+                        <input type="number" name="min_stake" step="5" value="20" min="{{agent.min_stake}}" required>
+                    </div>
+
+                </form>
+                <div>
+                    <button id="close-add-shop" class="form-btn">Close</button>
+                    <button id="add-new-shop-submit" class="form-btn">Add Shop</button>
+                </div>
+            </div>
+            <div class="form-layout" id="edit-shop" style="display: none;">
+                <h3>Edit Shop</h3>
+                <form id="edit-shop-form">{% csrf_token %}</form>
+                <div>
+                    <button id="close-edit-shop" class="form-btn">Close</button>
+                    <button id="edit-shop-submit" class="form-btn">Save</button>
+                </div>
+            </div>
+            <div class="form-layout" id="add-balance" style="display: none;">
+                <h3>Add Balance</h3>
+                <form id="add-balance-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" name="id" id="add-balance-id" hidden>
+                        <input id="add-balance-name" type="text" name="name" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="account">Balance:</label>
+                        <input type="number" name="account" required>
+                    </div>
+                </form>
+                <div>
+                    <button id="close-add-balance" class="form-btn">Close</button>
+                    <button id="add-balance-submit" class="form-btn">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="loader-container" id="loader">
+        <div class="loader"></div>
+        <div class="loader"></div>
+        <div class="loader"></div>
+    </div>
+    <script src="{% static "agent/js/script.js" %}" ></script>
+<script>  
+    new Lightpick({
+        field: document.getElementById('datepicker'),
+        singleDate: false,
+        format: 'MM/DD/YYYY',
+    });
+</script>
+  </body>
+</html>

@@ -4,10 +4,12 @@ from . import views
 
 urlpatterns = [
     path('',views.index,name="index"),
-    path('telegram/',views.telegram,name="telIndex"),
-    path('pick/<int:gameid>/',views.pick_card,name="pick"),
-    path('get-selected-numbers/', views.get_selected_numbers, name='get_selected_numbers'),
-    path('get-bingo-card/', views.get_bingo_card, name='get_bingo_card'),
-    path('get-bingo-stat/',views.get_bingo_stat,name="get_bingo_stat"),
-    path('bingo/<int:cardid>/<int:gameid>',views.bingo,name="bingo"),
+    path('new-game/',views.new_game_view,name="new_game"),
+    path('check/',views.check_winner_view,name='check'),
+    path('block/',views.block_view,name='block'),
+    path('get_game_stat/',views.game_stat,name="game_stat"),
+    path('add_player/',views.add_player,name="main_add_player"),
+    path('remove_player/',views.remove_player,name="main_remove_player"),
+    path('update_stake/',views.update_stake,name="update_stake"),
+    path('finish/',views.finish_view,name="finish")
 ]

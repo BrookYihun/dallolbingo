@@ -41,7 +41,7 @@ class UserGame(models.Model):
 class CashierGame(models.Model):
     user = models.ForeignKey(User,on_delete=models.CASCADE)
     game = models.ForeignKey(Game,on_delete=models.CASCADE)
-    selected_players = models.JSONField(default=list)
+    selected_players = models.JSONField(default=dict)
     collected = models.DecimalField(max_digits=100,default=0,decimal_places=2)
     pied = models.DecimalField(max_digits=100,default=0,decimal_places=2)
 

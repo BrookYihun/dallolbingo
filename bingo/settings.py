@@ -26,8 +26,8 @@ SECRET_KEY = 'django-insecure-8m_-xcl4r!cwh(vqk(4*&fsc(n-rczu9qtsd1#3n+mril)g$a@
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'www.dallolbingos.com',
-    'dallolbingos.com',
+    'www.dallolbingoshop.com',
+    'dallolbingoshop.com',
     '127.0.0.1'
 ]
 
@@ -89,7 +89,7 @@ DATABASES = {
         'NAME': 'dallol_bingo_db',
         'USER': 'dallol',
         'PASSWORD': 'Byihun@123',
-        'HOST': '5.75.175.113',  # Typically localhost for shared hosting
+        'HOST': 'localhost',  # Typically localhost for shared hosting
         'PORT': '5432',           # Leave empty if default port 5432 is used
     }
 }

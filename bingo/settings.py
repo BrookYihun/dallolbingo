@@ -138,6 +138,9 @@ USE_I18N = True
 
 USE_TZ = True
 
+STATIC_URL = 'static/'
+
+STATIC_ROOT = 'static/'
 
 LOGIN_URL = 'https://dallolbingohouse.com/account/login/'
 

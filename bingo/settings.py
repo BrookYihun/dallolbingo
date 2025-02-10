@@ -26,10 +26,11 @@ SECRET_KEY = 'django-insecure-8m_-xcl4r!cwh(vqk(4*&fsc(n-rczu9qtsd1#3n+mril)g$a@
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'www.dallolbingoshop.com',
-    'dallolbingoshop.com',
+    'www.dallolbingohouse.com',
+    'dallolbingohouse.com',
     '127.0.0.1',
-    '49.13.146.224'
+    '49.13.146.224',
+    'localhost'
 ]
 
 
@@ -142,7 +143,7 @@ STATIC_URL = 'static/'
 
 STATIC_ROOT = 'static/'
 
-LOGIN_URL = 'https://dallolbingos.com/account/login/'
+LOGIN_URL = 'https://dallolbingohouse.com/account/login/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

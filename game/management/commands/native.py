@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.utils.timezone import is_naive
 from django.contrib.auth import get_user_model
 from game.models import UserGame, Game
-from account.models import Agent, Account. UserGameCounter  # Adjust imports based on your project structure
+from account.models import Agent, Account, UserGameCounter  # Adjust imports based on your project structure
 
 User = get_user_model()
 

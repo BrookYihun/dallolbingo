@@ -15,7 +15,7 @@ class Command(BaseCommand):
             user = User.objects.get(id=25)
 
             today = timezone.now().date()
-            agent = Agent.objects.get(user=request.user)
+            agent = Agent.objects.get(user=user)
             
             if agent is not None:
                 shops = Account.objects.filter(agent=agent)

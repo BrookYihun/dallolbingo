@@ -3,6 +3,7 @@ from django.utils.timezone import is_naive
 from django.contrib.auth import get_user_model
 from game.models import UserGame, Game
 from account.models import Agent, Account, UserGameCounter  # Adjust imports based on your project structure
+from django.utils import timezone
 
 User = get_user_model()
 

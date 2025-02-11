@@ -97,7 +97,7 @@ DATABASES = {
         'HOST': 'localhost',  # Typically localhost for shared hosting
         'PORT': '5432',           # Leave empty if default port 5432 is used
     }
-# }
+}
 
 # DATABASES = {
 #     'default': {

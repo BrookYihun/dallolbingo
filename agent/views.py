@@ -13,7 +13,6 @@ from agent.models import Agent
 from cashier.models import Cashier
 from game.models import UserGame
 # Create your views here.
-logger = logging.getLogger('django')
 
 @login_required
 def agent_index_view(request):
@@ -58,7 +57,6 @@ def get_shop_stat(request):
             today_game_obj = UserGame.objects.filter(game__created_at__date=today,user=shop.user)
 
             for game in today_game_obj:
-                logger.error(f"Game ID: {game.id}, Created At: {game.created_at}, Is Naive: {is_naive(game.created_at)}")
                 today_earning+=float(game.game.shop_cut)
                 net_today+=(float(game.game.shop_cut)-float(game.game.admin_cut))
 

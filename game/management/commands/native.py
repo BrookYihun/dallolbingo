@@ -80,5 +80,3 @@ class Command(BaseCommand):
             
             context = {'message':'ERROR'}
             print(context)
-            
-

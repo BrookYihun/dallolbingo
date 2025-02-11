@@ -80,3 +80,7 @@ class Command(BaseCommand):
             
             context = {'message':'ERROR'}
             print(context)
+        except User.DoesNotExist:
+            self.stderr.write("User with ID 25 does not exist.")
+        except Agent.DoesNotExist:
+            self.stderr.write("No agent found for User ID 25.")

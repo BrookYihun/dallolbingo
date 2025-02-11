@@ -36,7 +36,10 @@ ALLOWED_HOSTS = [
     'localhost'
 ]
 
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://dallolbingohouse.com",
+    "https://www.dallolbingohouse.com",  # Add both with and without "www" if needed
+]
 
 # Application definition
 

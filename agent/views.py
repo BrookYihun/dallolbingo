@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.db import connection, models
 from django.shortcuts import get_object_or_404
+from django.utils.timezone import now
 
 from account.models import Account, UserGameCounter
 from agent.models import Agent
@@ -114,7 +115,11 @@ def admin_get_shop_stat(request, id):
 
     # Get the agent
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id, account, name, privilege, min_stake FROM agent_agent WHERE user_id = %s", [id])
+        cursor.execute("""
+            SELECT id, account, name, privilege, min_stake 
+            FROM agent_agent 
+            WHERE user_id = %s
+        """, [id])
         agent = cursor.fetchone()
 
     if not agent:

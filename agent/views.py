@@ -254,7 +254,7 @@ def get_agent_stat(request):
                 FROM account_account 
                 WHERE agent_id IN %s
             """
-            cursor.execute(query, [tuple(agent_ids)])  # Pass as a tuple
+            cursor.execute(query, (tuple(agent_ids),))  # Pass as a tuple
         else:
             cursor.execute("""
                 SELECT id, user_id, agent_id, total_earning, percentage, account 

@@ -247,14 +247,21 @@ def get_agent_stat(request):
         agent_ids = [agent[0] for agent in agents]
         agent_users = {agent[1]: agent for agent in agents}
 
-        # Get all shops under the agents
-        with connection.cursor() as cursor:
-            cursor.execute("""
+    with connection.cursor() as cursor:
+        if agent_ids:  # Ensure the list is not empty
+            query = """
                 SELECT id, user_id, agent_id, total_earning, percentage, account 
                 FROM account_account 
                 WHERE agent_id IN %s
-            """, [tuple(agent_ids)])
-            shops = cursor.fetchall()
+            """
+            cursor.execute(query, [tuple(agent_ids)])  # Pass as a tuple
+        else:
+            cursor.execute("""
+                SELECT id, user_id, agent_id, total_earning, percentage, account 
+                FROM account_account 
+                WHERE 1=0
+            """)  # Returns no results when agent_ids is empty
+        shops = cursor.fetchall()
 
         if not shops:
             return JsonResponse({'message': 'No shops found'})

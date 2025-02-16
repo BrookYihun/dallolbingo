@@ -507,9 +507,9 @@ def get_shop_stat_filter(request):
                    COALESCE(SUM(g.shop_cut), 0) AS total_earning
             FROM game_usergame ug
             JOIN game_game g ON ug.game_id = g.id
-            WHERE ug.user_id IN %s
+            WHERE ug.user_id = ANY(%s)
             GROUP BY ug.user_id
-        """, [start_date, end_date, tuple(shop_ids)])
+        """, [start_date, end_date, list(shop_ids)])
 
         game_stats = {stat[0]: stat[1:] for stat in cursor.fetchall()}
 
@@ -517,9 +517,9 @@ def get_shop_stat_filter(request):
         cursor.execute("""
             SELECT user_id, game_counter 
             FROM account_usergamecounter 
-            WHERE user_id IN %s 
+            WHERE user_id = ANY(%s) 
             AND last_game_date = %s::timestamptz
-        """, [tuple(shop_ids), today])
+        """, [list(shop_ids), today])
         game_counters = {row[0]: row[1] for row in cursor.fetchall()}
 
     # Prepare response
@@ -625,18 +625,18 @@ def admin_get_shop_stat_filter(request, id):
                    COALESCE(SUM(g.shop_cut), 0) AS total_earning
             FROM game_usergame ug
             JOIN game_game g ON ug.game_id = g.id
-            WHERE ug.user_id IN %s
+            WHERE ug.user_id = ANY(%s)
             GROUP BY ug.user_id
-        """, [start_date, end_date, tuple(shop_ids)])
+        """, [start_date, end_date, list(shop_ids)])
         
         game_stats = {stat[0]: stat[1:] for stat in cursor.fetchall()}
         
         cursor.execute("""
             SELECT user_id, game_counter 
             FROM account_usergamecounter 
-            WHERE user_id IN %s 
+            WHERE user_id = ANY(%s) 
             AND last_game_date = %s
-        """, [tuple(shop_ids), today])
+        """, [list(shop_ids), today])
         game_counters = {row[0]: row[1] for row in cursor.fetchall()}
     
     shops_stat = []

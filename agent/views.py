@@ -139,38 +139,43 @@ def admin_get_shop_stat(request, id):
     if not shops:
         return JsonResponse({'message': 'No shops found'})
 
-    shop_ids = [shop[1] for shop in shops]  # Extract user_ids from shops
+    shop_ids = tuple(shop[1] for shop in shops)  # Extract user_ids from shops and convert to tuple
+
+    if not shop_ids:  # Avoid SQL error if no shops exist
+        return JsonResponse({'message': 'No shops found'})
 
     # Get game counters in bulk
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT user_id, game_counter, last_game_date FROM account_usergamecounter WHERE user_id IN %s
-        """, [tuple(shop_ids)])
+        cursor.execute(f"""
+            SELECT user_id, game_counter, last_game_date FROM account_usergamecounter 
+            WHERE user_id IN {shop_ids}
+        """)
         game_counters = {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
 
     # Get total games played in bulk
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT user_id, COUNT(*) FROM game_usergame WHERE user_id IN %s GROUP BY user_id
-        """, [tuple(shop_ids)])
+        cursor.execute(f"""
+            SELECT user_id, COUNT(*) FROM game_usergame 
+            WHERE user_id IN {shop_ids} GROUP BY user_id
+        """)
         total_games_played = {row[0]: row[1] for row in cursor.fetchall()}
 
     # Get today's earnings in bulk
     with connection.cursor() as cursor:
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT game_usergame.user_id, 
                    SUM(game_game.shop_cut) AS today_earning, 
                    SUM(game_game.shop_cut - game_game.admin_cut) AS net_today 
             FROM game_usergame 
             JOIN game_game ON game_usergame.game_id = game_game.id 
-            WHERE game_usergame.user_id IN %s AND DATE(game_game.created_at) = %s
+            WHERE game_usergame.user_id IN {shop_ids} AND DATE(game_game.created_at) = %s
             GROUP BY game_usergame.user_id
-        """, [tuple(shop_ids), today])
+        """, [today])
         today_earnings = {row[0]: (float(row[1] or 0), float(row[2] or 0)) for row in cursor.fetchall()}
 
     # Get user active status in bulk
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id, is_active FROM auth_user WHERE id IN %s", [tuple(shop_ids)])
+        cursor.execute(f"SELECT id, is_active FROM auth_user WHERE id IN {shop_ids}")
         user_status = {row[0]: row[1] for row in cursor.fetchall()}
 
     shops_stat = []

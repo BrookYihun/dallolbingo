@@ -287,7 +287,8 @@ def get_agent_stat(request):
                 JOIN game_game ON game_usergame.game_id = game_game.id 
                 WHERE game_usergame.user_id = ANY(%s) AND DATE(game_game.created_at) = %s
                 GROUP BY game_usergame.user_id
-            """, [(list(agent_ids),), today])
+            """, [list(agent_ids), today])  # Remove the extra tuple around list(agent_ids)
+
             today_earnings = {row[0]: float(row[1]) for row in cursor.fetchall()}
 
         # Get total earnings per agent

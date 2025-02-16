@@ -275,8 +275,8 @@ def get_agent_stat(request):
             cursor.execute("""
                 SELECT user_id, game_counter, last_game_date 
                 FROM account_usergamecounter 
-                WHERE user_id IN %s
-            """, [tuple(shop_user_ids)])
+                WHERE user_id = ANY(%s)
+            """, (list(shop_user_ids),))
             game_counters = {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
 
         # Get today's earnings for all shops
@@ -285,9 +285,9 @@ def get_agent_stat(request):
                 SELECT game_usergame.user_id, SUM(game_game.admin_cut) 
                 FROM game_usergame 
                 JOIN game_game ON game_usergame.game_id = game_game.id 
-                WHERE game_usergame.user_id IN %s AND DATE(game_game.created_at) = %s
+                WHERE game_usergame.user_id = ANY(%s) AND DATE(game_game.created_at) = %s
                 GROUP BY game_usergame.user_id
-            """, [tuple(shop_user_ids), today])
+            """, [(list(agent_ids),), today])
             today_earnings = {row[0]: float(row[1]) for row in cursor.fetchall()}
 
         # Get total earnings per agent

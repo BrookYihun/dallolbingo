@@ -248,19 +248,20 @@ def get_agent_stat(request):
         agent_users = {agent[1]: agent for agent in agents}
 
     with connection.cursor() as cursor:
-        if agent_ids:  # Ensure the list is not empty
+        if agent_ids:  # Ensure agent_ids is not empty
             query = """
                 SELECT id, user_id, agent_id, total_earning, percentage, account 
                 FROM account_account 
-                WHERE agent_id IN %s
+                WHERE agent_id = ANY(%s)
             """
-            cursor.execute(query, (tuple(agent_ids),))  # Pass as a tuple
+            cursor.execute(query, (list(agent_ids),))  # Convert to list for ANY()
         else:
             cursor.execute("""
                 SELECT id, user_id, agent_id, total_earning, percentage, account 
                 FROM account_account 
                 WHERE 1=0
-            """)  # Returns no results when agent_ids is empty
+            """)  # Return empty result if agent_ids is empty
+
         shops = cursor.fetchall()
 
         if not shops:

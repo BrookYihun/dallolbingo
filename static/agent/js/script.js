@@ -1,4 +1,5 @@
 let allRows =[];
+let privilege = false;
 document.addEventListener("DOMContentLoaded", function () {
     
     add_loader();
@@ -68,7 +69,7 @@ function filterTable() {
     tableBody.innerHTML = ""; // Clear existing rows
 
     filteredRows.forEach(shopStat => {
-        const html = generateShopStatHTML(shopStat);
+        const html = generateShopStatHTML(shopStat,);
         tableBody.insertAdjacentHTML('beforeend', html);
     });
 
@@ -143,7 +144,7 @@ function get_shop_stat(){
     });
 }
 
-function generateShopStatHTML(userStat,privilege) {
+function generateShopStatHTML(userStat) {
     var result =  `
         <tr>
             <td>${userStat.name}</td>
@@ -188,10 +189,11 @@ function renderShopsStats(data) {
     tableBody.innerHTML = ""; // Clear existing rows
 
     allRows = [];
+    privilege = data.agent.privilege;
 
     // Generate HTML for each user statistic and append it to the table
     data.shops_stat.forEach(function(shopStat) {
-        const html = generateShopStatHTML(shopStat,data.agent.privilege);
+        const html = generateShopStatHTML(shopStat);
         tableBody.insertAdjacentHTML('beforeend', html);
         allRows.push(shopStat);
     });

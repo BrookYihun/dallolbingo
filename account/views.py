@@ -81,9 +81,8 @@ def dashboard_view(request):
             end_date_naive = datetime.strptime(end_date_str, '%m/%d/%Y')
             
             # Make them timezone-aware using the current timezone
-            start_date = timezone.make_aware(start_date_naive, timezone.get_current_timezone())
-            end_date = timezone.make_aware(end_date_naive, timezone.get_current_timezone()) + timedelta(days=1) - timedelta(seconds=1)
-            
+            start_date = timezone.make_aware(start_date_naive, timezone.get_current_timezone()) + timedelta(hours=4)
+            end_date = timezone.make_aware(end_date_naive, timezone.get_current_timezone()) + timedelta(days=1, hours=3, minutes=59, seconds=59)
             cashiers = Cashier.objects.filter(shop=acc)
             is_cashier = False
             game_data = []
@@ -132,9 +131,8 @@ def dashboard_view(request):
             return render(request,'account/dashboard.html',context)
 
     latest_user_games = UserGame.objects.filter(user=user).order_by('-created_at')[:100]
-    start_of_day = datetime.combine(today, datetime.min.time())
-    end_of_day = datetime.combine(today, datetime.max.time())
-    cashiers = Cashier.objects.filter(shop=acc)
+    start_of_day = datetime.combine(today, time(4, 0, 0))  # 4:00 AM today
+    end_of_day = datetime.combine(today + timedelta(days=1), time(3, 59, 59))  # 3:59:59 AM next daycashiers = Cashier.objects.filter(shop=acc)
     is_cashier = False
     game_data = []
     cashier_data= []

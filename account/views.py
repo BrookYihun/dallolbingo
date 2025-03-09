@@ -132,7 +132,8 @@ def dashboard_view(request):
 
     latest_user_games = UserGame.objects.filter(user=user).order_by('-created_at')[:100]
     start_of_day = datetime.combine(today, time(4, 0, 0))  # 4:00 AM today
-    end_of_day = datetime.combine(today + timedelta(days=1), time(3, 59, 59))  # 3:59:59 AM next daycashiers = Cashier.objects.filter(shop=acc)
+    end_of_day = datetime.combine(today + timedelta(days=1), time(3, 59, 59))  # 3:59:59 AM next day
+    cashiers = Cashier.objects.filter(shop=acc)
     is_cashier = False
     game_data = []
     cashier_data= []

@@ -75,10 +75,12 @@ window.addEventListener('load', function() {
     }
     var modeCookie = getCookie("mode");
     if(modeCookie !=null){
-        if(modeCookie) {
+        if(modeCookie=='true') {
             document.body.classList.remove('dark');
+            switchMode.checked = true;
         } else {
             document.body.classList.add('dark');
+            switchMode.checked = false;
         }
     }
 
@@ -259,7 +261,7 @@ function updateLastCalledNumbers() {
     var lastCalledNumbersElement = document.getElementById('lastCalledNumbers');
     lastCalledNumbersElement.innerHTML = '';
 
-    for (var i = Math.max(0, calledNumbers.length - 5); i < calledNumbers.length; i++) {
+    for (var i = Math.max(0, calledNumbers.length - 4); i < calledNumbers.length; i++) {
         var number = calledNumbers[i];
         var numberElement = document.createElement('div');
         numberElement.classList.add('last-called-num');
@@ -354,8 +356,6 @@ function startAuto() {
 }
 
 function stopAuto() {
-    callnextbtn.classList.remove('inactive');
-    shuffle_btn.classList.remove('inactive');
     finshbtn.classList.remove('inactive');
     check_btn.classList.remove('inactive');
     clearInterval(autoIntervalId);
@@ -385,6 +385,7 @@ finshbtn.onclick = function(){
     finshbtn.style.display = "none";
     newgamebtn.style.display = "block";
     shuffle_btn.style.display = "block";
+    shuffle_btn.classList.remove('inactive');
     $.ajax({
         url:  "/finish/",  // Replace with your Django view URL
         type: "GET",
@@ -417,7 +418,8 @@ check_btn.onclick = function () {
 
 function checkBingo(num) {
     // Make an AJAX request to your Django view to fetch the updated list of selected numbers
-    console.log(calledNumbers);
+    const patterns = JSON.parse(decodeURIComponent(getCookie("Patterns")));
+    console.log(patterns);
     $.ajax({
       url:  "/check/",  // Replace with your Django view URL
       type: "GET",
@@ -425,6 +427,7 @@ function checkBingo(num) {
         card: num,
         called: JSON.stringify(calledNumbers),
         game: game_id.innerText,
+        patterns: JSON.stringify(patterns),
         // Add more parameters as needed
     },
       success: function(response) {
@@ -461,6 +464,9 @@ function checkBingo(num) {
             bonus_c.style.display = "block";
             bonus_t.innerText = cardResult.bonus + "Price Bonus";
             let count = 0;
+            filePath = "/static/game/audio/bonus.mp3";
+            var audio = new Audio(filePath);
+            audio.play();
             const intervalId = setInterval(() => {
                 launchConfetti();
                 count++;
@@ -495,7 +501,12 @@ function checkBingo(num) {
   
         var p = document.createElement("p");
         p.className = "bingo";
-        p.textContent = cardResult.card_name + " - " + cardResult.message;
+        if(cardResult.remaining_numbers){
+            p.textContent = cardResult.card_name + " - Bad " + cardResult.message;
+        }else{
+            p.textContent = cardResult.card_name + " - Good " + cardResult.message;
+        }
+        
         tableContainer.appendChild(p);
   
         var table = document.createElement("table");
@@ -508,6 +519,7 @@ function checkBingo(num) {
         });
         table.appendChild(tr);
         var counter = 1;
+        const lastNumber = calledNumbers[calledNumbers.length - 1];
         cardResult.card.forEach(function(row) {
           var tr = document.createElement("tr");
           row.forEach(function(cell) {
@@ -518,6 +530,9 @@ function checkBingo(num) {
                     td.className = "miss-winning-row";
                 }else{
                     td.className = "winning-row";
+                    if(cell === lastNumber){
+                        td.classList.add("blink-result");
+                    }
                 }
               }else if (calledNumbers.includes(cell)) {
                 td.className = "remaining-number";
@@ -703,9 +718,17 @@ shuffle_btn.onclick = function () {
     if (shuffle_btn.innerText === "SHUFFLE") {
         shuffleBoard();
         shuffle_btn.innerText = "STOP";
+        callnextbtn.classList.add('inactive');
+        startbtn.classList.add('inactive');
+        finshbtn.classList.add('inactive');
+        check_btn.classList.add('inactive');
     } else {
         stopShuffleBoard();
         shuffle_btn.innerText = "SHUFFLE";
+        callnextbtn.classList.remove('inactive');
+        startbtn.classList.remove('inactive');
+        finshbtn.classList.remove('inactive');
+        check_btn.classList.remove('inactive');
     }
 };
 function launchConfetti() {

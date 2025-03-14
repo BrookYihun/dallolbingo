@@ -7,6 +7,7 @@ const main_sec = document.getElementById('main');
 const pay = document.getElementById('pay');
 var other_selected = [];
 var stake = 0;
+var mycolor = "";
 
 let intervalId;
 
@@ -52,8 +53,26 @@ moreNumber.addEventListener('click',()=>{
     
 });
 
+
+clearbtn.addEventListener('click',()=>{
+    deleteCookie("selectedPlayers");
+    var divs = container.querySelectorAll(".box");
+    var boundary = 100;
+    var buttonText = moreNumber.textContent;
+    if(buttonText=="1-100"){
+        boundary = 200;
+    }
+    for (var i = 0; i <boundary; i++) {
+        if (selectedNumbers.includes(i+1)){
+            divs[i].className = "box";
+            remove_player(i+1);
+        }
+    }
+    selectedNumbers=[];
+});
+
 function add(){
-      for (let i = 101; i <= 200; i++) {
+     for (let i = 101; i <= 200; i++) {
       const box = document.createElement('div');
       box.textContent = i;
       box.classList.add('box');
@@ -61,7 +80,7 @@ function add(){
       box.addEventListener('click', () => {
           if (selectedNumbers.includes(i)) {
               selectedNumbers = selectedNumbers.filter(num => num !== i);
-              box.classList.remove('selected');
+              box.className = "box";
               remove_player(i);
           } else {
               selectedNumbers.push(i);
@@ -130,12 +149,12 @@ function get_game_stat(){
                 pay.style.display = 'none';
                 document.getElementById('acc').value =response.balance;
                 document.getElementById('game').value = response.game.id;
-                other_selected = Array.isArray(response.other_selected) ? response.other_selected : [];
-                selectedNumbers = Array.isArray(response.selected_players) ? response.selected_players : [];
+                selectedNumbersStr = Array.isArray(response.selected_players) ? response.selected_players : [];
+                selectedNumbers = selectedNumbersStr.map(str => parseInt(str, 10));
                 stake = response.game.stake;
                 document.getElementById('noplayer').value = selectedNumbers.length;
                 document.getElementById('collected').value = selectedNumbers.length * stake;
-                update_view();
+                update_view(response.other_selected);
             }
         },
         error: function(xhr, status, error) {
@@ -144,27 +163,50 @@ function get_game_stat(){
       });
 }
 
+function arraysEqual(arr1, arr2) {
+    if (arr1.length !== arr2.length) return false;
+    for (let i = 0; i < arr1.length; i++) {
+      if (arr1[i] !== arr2[i]) return false;
+    }
+    return true;
+  }
+  
 
 
-function update_view(){
+
+function update_view(players){
     var boxes = document.querySelectorAll('.box');
-    var selectedNumbersS = selectedNumbers;
-    var other_selectedS = other_selected;
-    boxes.forEach(function(box) {
-        var innerText = box.innerText.trim(); // Get inner text and trim whitespace
-        
-        // Check if inner text is in the numbersToMatch array
-        if (selectedNumbersS.includes(innerText)) {
-            // Do something with the matching box element, e.g., add a class
-            box.classList.add('selected');
-        }else if(other_selectedS.includes(innerText)){
-            box.classList.add('selected');
-            box.classList.add('blured');
-        }else {
-            box.classList.remove('selected');
-            box.classList.remove('blured');
+    other_selected = [];
+
+    players.forEach(function(cashier){
+        var arrayStr = Array.isArray(cashier.selected_players) ? cashier.selected_players : [];
+        var array = arrayStr.map(str => parseInt(str, 10));
+        var color = "color"+cashier.num;
+        if(!arraysEqual(array,selectedNumbers)){
+            other_selected.push(...array);
         }
+        for (let element of array) {
+            boxes[element-1].classList.add('selected');
+            if(!selectedNumbers.includes(element)){
+                boxes[element-1].classList.add('blured');
+                boxes[element-1].classList.add(color);
+            }
+        }
+
     });
+
+    boxes.forEach(function(box) {
+        var innerTextStr = box.innerText.trim(); // Get inner text and trim whitespace
+        var innerText = parseInt(innerTextStr, 10);
+        // Check if inner text is in the numbersToMatch array
+        if (other_selected.includes(innerText)||selectedNumbers.includes(innerText)) {
+            // Do something with the matching box element, e.g., add a class
+        }else {
+            box.className = "box";
+        }
+
+    });
+
 }
 
 function remove_player(card){
@@ -227,15 +269,14 @@ window.onload = function() {
         box.classList.add('box');
         
         box.addEventListener('click', () => {
-            if (selectedNumbers.includes(box.textContent)) {
+            if (selectedNumbers.includes(i)) {
                 selectedNumbers = selectedNumbers.filter(num => num !== i);
-                box.classList.remove('selected');
+                box.className = "box";
                 remove_player(i);
             } else {
                 selectedNumbers.push(i);
                 box.classList.add('selected');
                 add_player(i);
-                console.log(selectedNumbers);
             }
         });
 

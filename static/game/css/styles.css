@@ -136,15 +136,15 @@
 
 .bingo-panel{
     display: grid;
-    grid-template-columns: 82% 18%; /* Set the columns to 70% and 30% */
+    grid-template-columns: 85% 15%; /* Set the columns to 70% and 30% */
     grid-gap: 10px;
 }
 
 .action-panel{
     display: grid;
-    grid-template-columns: 70% 30%; /* Set the columns to 70% and 30% */
+    grid-template-columns: 65% 35%; /* Set the columns to 70% and 30% */
     grid-gap: 10px;
-    margin-top: 30px;
+    margin-top: 20px;
 }
 
 .bingo-row{
@@ -159,10 +159,10 @@
     color: #000000;
     border-radius: 50%;
     font-size: 20px;
-    width: 62px;
-    height: 62px;
+    width: 64px;
+    height: 64px;
     margin: 0px 20px 0px 4px;
-    line-height: 30px; /* Adjusted line-height */
+    line-height: 32px; /* Adjusted line-height */
 }
 
 .letter[data-letter="B"],.last-called-num-view-all[data-letter="B"]{
@@ -189,13 +189,13 @@
     background: linear-gradient(to bottom, #035fff, #006486);
     color: #ebf1f7;
     border-radius: 50%;
-    font-size: 23px;
-    width: 62px;
-    height: 62px;
+    font-size: 25px;
+    width: 64px;
+    height: 64px;
     text-align: center;
     transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    line-height: 62px; /* Adjusted line-height */
+    line-height: 64px; /* Adjusted line-height */
     font-weight: bold;
     margin: 2px 6px;
     opacity: 0.75;
@@ -242,8 +242,12 @@
     color: #000000;
     border-color: #ffaf00;
     opacity: 1;
-    font-size: 23px;
+    font-size: 35px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.blink-result{
+    animation: blink-animation 1s infinite, bounce 1s infinite, size-transform 1s infinite;
 }
 
 @keyframes blink-animation {
@@ -309,7 +313,7 @@
     background: linear-gradient(to bottom, #ffc839, #e4840c);
     text-align: center;
     margin: 10px 20px;
-    padding: 27px;
+    padding: 20px;
     box-shadow: 10px 10px 10px rgba(0, 0, 0, 0.5), 0 0 6px rgba(0, 0, 0, 0.4) inset;
     transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
@@ -453,7 +457,7 @@ input[type="range"]:focus::-moz-range-thumb {
 .winner{
     display: flex;
     align-items: center;
-    font-size: 35px;
+    font-size: 50px;
     color: #ffffff;
 }
 .winner img{

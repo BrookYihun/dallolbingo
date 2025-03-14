@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -76,14 +76,8 @@ def dashboard_view(request):
         if selected_date:
             start_date_str, end_date_str = selected_date.split(' - ')
             # Convert the date strings to datetime objects
-            # Convert to naive datetime first
-            start_date_naive = datetime.strptime(start_date_str, '%m/%d/%Y')
-            end_date_naive = datetime.strptime(end_date_str, '%m/%d/%Y')
-            
-            # Make them timezone-aware using the current timezone
-            start_date = timezone.make_aware(start_date_naive, timezone.get_current_timezone())
-            end_date = timezone.make_aware(end_date_naive, timezone.get_current_timezone()) + timedelta(days=1) - timedelta(seconds=1)
-            
+            start_date = datetime.strptime(start_date_str, '%m/%d/%Y')
+            end_date = datetime.strptime(end_date_str, '%m/%d/%Y') + timedelta(days=1) - timedelta(seconds=1)
             cashiers = Cashier.objects.filter(shop=acc)
             is_cashier = False
             game_data = []
@@ -132,8 +126,8 @@ def dashboard_view(request):
             return render(request,'account/dashboard.html',context)
 
     latest_user_games = UserGame.objects.filter(user=user).order_by('-created_at')[:100]
-    start_of_day = datetime.combine(today, datetime.min.time())
-    end_of_day = datetime.combine(today, datetime.max.time())
+    start_of_day = datetime.combine(today, time(4, 0, 0))  # 4:00 AM today
+    end_of_day = datetime.combine(today + timedelta(days=1), time(3, 59, 59))  # 3:59:59 AM next day
     cashiers = Cashier.objects.filter(shop=acc)
     is_cashier = False
     game_data = []
@@ -171,6 +165,14 @@ def dashboard_view(request):
 
     context={'acc':acc,'counter':today_game_counter.game_counter,'letest_games':latest_user_games,'today_earning':today_earning,'cashier':is_cashier,'game_data':game_data[:100],'cashier_stat':cashiers,'cashier_earning':cashier_stat_list}
     return render(request,'account/dashboard.html',context)
+
+
+@login_required
+def setting_view(request):
+    user = request.user
+    today_game_counter = UserGameCounter.objects.get(user=user)
+    acc = Account.objects.get(user=user)
+    return render(request,'account/setting.html',{"acc":acc,"cout":today_game_counter})
 
 
 @login_required

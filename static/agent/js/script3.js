@@ -1,3 +1,4 @@
+let allRows = []; // This will store all rows data
 document.addEventListener("DOMContentLoaded", function () {
     
     add_loader();
@@ -51,7 +52,26 @@ function updateTable() {
             row.style.display = "";
         }
     });
+}
 
+function filterTable() {
+    const searchValue = document.getElementById("searchBox").value.toLowerCase();
+
+    // Filter the full data based on the search value
+    const filteredRows = allRows.filter(shopStat => {
+        return shopStat.name.toLowerCase().includes(searchValue); // Filter by name
+    });
+
+    // Update the table with filtered rows
+    const tableBody = document.querySelector("#hiddenData tbody");
+    tableBody.innerHTML = ""; // Clear existing rows
+
+    filteredRows.forEach(shopStat => {
+        const html = generateShopStatHTML(shopStat);
+        tableBody.insertAdjacentHTML('beforeend', html);
+    });
+
+    updateTable(); // Update the table with pagination
 }
 
 function filterTable() {
@@ -172,12 +192,16 @@ function renderShopsStats(data) {
     const tableBody = document.querySelector("#hiddenData tbody");
     tableBody.innerHTML = ""; // Clear existing rows
 
+    allRows = []; // Reset allRows to avoid duplicates
 
     // Generate HTML for each user statistic and append it to the table
     data.shops_stat.forEach(function(shopStat) {
         const html = generateShopStatHTML(shopStat);
         tableBody.insertAdjacentHTML('beforeend', html);
+        allRows.push(shopStat);
     });
+
+    updateTable(); 
 
 }
 

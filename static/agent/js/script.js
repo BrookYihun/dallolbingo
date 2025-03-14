@@ -1,3 +1,5 @@
+let allRows =[];
+let privilege = false;
 document.addEventListener("DOMContentLoaded", function () {
     
     add_loader();
@@ -52,24 +54,6 @@ function updateTable() {
         }
     });
 
-}
-
-function filterTable() {
-    const searchValue = document.getElementById("searchBox").value.toLowerCase();
-    const tableBody = document.querySelector("#gameTable tbody");
-    const rows = tableBody.querySelectorAll("tr");
-
-    rows.forEach(row => {
-        const nameCell = row.querySelector("td:first-child"); // Name is in the first column
-        if (nameCell) {
-            const nameText = nameCell.textContent.toLowerCase();
-            if (nameText.includes(searchValue)) {
-                row.style.display = ""; // Show row if it matches
-            } else {
-                row.style.display = "none"; // Hide row if no match
-            }
-        }
-    });
 }
 
 var loader = document.getElementById('loader');
@@ -140,7 +124,7 @@ function get_shop_stat(){
     });
 }
 
-function generateShopStatHTML(userStat,privilege) {
+function generateShopStatHTML(userStat) {
     var result =  `
         <tr>
             <td>${userStat.name}</td>
@@ -184,12 +168,17 @@ function renderShopsStats(data) {
     const tableBody = document.querySelector("#hiddenData tbody");
     tableBody.innerHTML = ""; // Clear existing rows
 
+    allRows = [];
+    privilege = data.agent.privilege;
 
     // Generate HTML for each user statistic and append it to the table
     data.shops_stat.forEach(function(shopStat) {
-        const html = generateShopStatHTML(shopStat,data.agent.privilege);
+        const html = generateShopStatHTML(shopStat);
         tableBody.insertAdjacentHTML('beforeend', html);
+        allRows.push(shopStat);
     });
+
+    updateTable(); 
 
 }
 

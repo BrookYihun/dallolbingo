@@ -99,6 +99,7 @@ DATABASES = {
         'PASSWORD': 'Byihun@123',
         'HOST': 'localhost',  # Typically localhost for shared hosting
         'PORT': '5432',           # Leave empty if default port 5432 is used
+        'CONN_MAX_AGE': 600,
     }
 }
 

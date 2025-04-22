@@ -349,7 +349,7 @@ window.onload = function() {
 
     if (cashier === "True") {
         let shop = document.getElementById('shop').value;
-        socket = new WebSocket(`ws://${window.location.host}/ws/game/${shop}/${game_id}/`);
+        socket = new WebSocket(`wss://${window.location.host}/ws/game/${shop}/${game_id}/`);
     
         socket.onopen = function (e) {
             console.log("WebSocket connection established.");

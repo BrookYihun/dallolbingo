@@ -168,10 +168,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/backup/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'backup/static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 MEDIA_URL = '/backup/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'backup/media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 

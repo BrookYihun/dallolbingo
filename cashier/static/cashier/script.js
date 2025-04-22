@@ -144,7 +144,7 @@ function get_game_stat() {
 
             if (gameId !== response.game.id) {
                 gameId = response.game.id;
-                connectWebSocket(document.getElementById('shop').value, gameId); // Reconnect WebSocket
+                connectWebSocket(document.getElementById('shop').innerText, gameId); // Reconnect WebSocket
             }
 
             document.getElementById('game').value = gameId;
@@ -232,7 +232,7 @@ function connectWebSocket(shop, gameId) {
         socket.close(); // Close existing connection before creating new one
     }
 
-    socket = new WebSocket(`ws://${window.location.host}/ws/game/${shop}/${gameId}/`);
+    socket = new WebSocket(`wss://${window.location.host}/ws/game/${shop}/${gameId}/`);
 
     socket.onopen = function () {
         console.log(`Connected to WebSocket for game ${gameId}`);

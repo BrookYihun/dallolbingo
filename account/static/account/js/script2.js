@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", function () {
         };
     
         // Send AJAX request to Django API
-        fetch("/account/save-game-settings/", {
+        fetch("/backup/account/save-game-settings/", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

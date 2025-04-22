@@ -105,8 +105,8 @@ window.addEventListener('load', function() {
     }
 
     if (cashier === "True") {
-        let shop = document.getElementById('shop').value;
-        socket = new WebSocket(`ws://${window.location.host}/ws/game/${shop}/${game_id.innerText}/`);
+        let shop = document.getElementById('shop').innerText;
+        socket = new WebSocket(`wss://${window.location.host}/ws/game/${shop}/${game_id.innerText}/`);
     
         socket.onopen = function (e) {
             console.log("WebSocket connection established.");

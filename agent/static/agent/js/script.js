@@ -158,7 +158,9 @@ function generateShopStatHTML(userStat) {
             <td>
                 <button class="action-btn" onclick="activate_deactivate(${userStat.id})" >${userStat.active}</button>`;
         if(privilege){
-            result += `<button class="action-btn" onclick="add_balance(${userStat.id})" >Add Balance</button>`;
+            result += `<button class="action-btn" onclick="add_balance(${userStat.id})" >Add Balance</button>
+            <button class="action-btn" onclick="add_cashier(${userStat.id})" >Add Cashier</button>`;
+            
         }
                 
                 result+= `<button class="action-btn" onclick="edit_shop(${userStat.id})" >Edit</button>

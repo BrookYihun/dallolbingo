@@ -24,6 +24,13 @@ let bonus_c = document.getElementById('bonus_animation');
 let bonus_t = document.getElementById('bonus_text');
 let free_c = document.getElementById('free_hit');
 let free_t = document.getElementById('free_hit_text');
+const cashier = document.getElementById('cashier').innerText;
+const main_cashier = document.getElementById('main_cashier').innerText;
+const shop = document.getElementById('shop').innerText;
+var game_id = document.getElementById("game-id");
+const pay = document.getElementById('pay');
+
+let socket = null;
 
 menuBar.addEventListener('click', function () {
 	sidebar.classList.toggle('hide');
@@ -48,6 +55,11 @@ switchMode.addEventListener('change', function () {
 window.addEventListener('load', function() {
     // Get the loader element
     var loader = document.getElementById('loader');
+
+    if (main_cashier === "False") {
+        callnextbtn.classList.add('inactive');
+        startbtn.classList.add('inactive');
+    }
 
     // Hide the loader element
     loader.style.display = 'none';
@@ -92,6 +104,131 @@ window.addEventListener('load', function() {
         callingSpeedTxt.textContent = "Auto call " + invertedValue +" secounds";
     }
 
+    if (cashier === "True") {
+        let shop = document.getElementById('shop').value;
+        socket = new WebSocket(`ws://${window.location.host}/ws/game/${shop}/${game_id.innerText}/`);
+    
+        socket.onopen = function (e) {
+            console.log("WebSocket connection established.");
+    
+            // Send create_game message with a random or predefined game I
+            
+        };
+    
+        socket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+            const cardId = parseInt(data.card, 10); // Parse the card ID as an integer  
+            
+            if (data.action === 'auto_play_started') {
+                callnextbtn.classList.add('inactive');
+                startbtn.classList.remove('inactive');
+                shuffle_btn.classList.add('inactive');
+                finshbtn.classList.add('inactive');
+                check_btn.classList.add('inactive');
+                autoPlaying = true;
+                startbtn.textContent = "STOP AUTO PLAY";
+
+                if(main_cashier === "True"){
+                    if (autoIntervalId) {
+                        clearInterval(autoIntervalId);
+                        autoIntervalId = null;
+                        alert("Stopped");
+                        return;
+                    }
+                
+                    autoIntervalId = setInterval(function () {
+                        callNumber();
+                        var remainingNumbers = getRemainingNumbers();
+                        if (remainingNumbers.length === 0) {
+                            clearInterval(autoIntervalId);
+                            autoIntervalId = null;
+                        }
+                    }, callinginterval);
+                    autoPlaying = true;
+                }
+            }
+
+            if (data.action === 'auto_play_stoped') {
+                finshbtn.classList.remove('inactive');
+                check_btn.classList.remove('inactive');
+                if(main_cashier === "True"){
+                    clearInterval(autoIntervalId);
+                    autoIntervalId = null;
+                }
+                autoPlaying = false;
+                startbtn.textContent = "START AUTO PLAY";
+            }
+
+            if (data.action === 'number_called' && main_cashier==='False') {
+                callednumberdisplay.style.display = "block";
+                const selectedNumber = parseInt(data.number, 10); // Parse the number as an integer
+                calledNumbers.push(selectedNumber);
+                var numberElement = document.querySelector('.number[data-number="' + selectedNumber + '"]');
+                if (numberElement) {
+                    changeBlink(selectedNumber);
+                }
+                var letter = 'B';
+                if(selectedNumber <=15){
+                    letter='B';
+                }
+                else if(selectedNumber <=30){
+                    letter='I';
+                }
+                else if(selectedNumber <=45){
+                    letter='N';
+                }
+                else if(selectedNumber <=60){
+                    letter='G';
+                }
+                else if(selectedNumber <=75){
+                    letter='O';
+                }// Get the corresponding letter
+                lastletter.textContent = letter;
+                lastnum.textContent = selectedNumber;
+                updateLastCalledNumbers();
+                updateTotalCalled();
+            }
+
+            if (data.type === "check_bingo_request") {
+                // Maybe show a loading indicator saying "Checking card: X..."
+                console.log("Received check request for:", data.number);
+                if (cashier === "True" && main_cashier==="True") {
+                    checkBingo(data.number);
+                }
+            }
+        
+            if (data.type === "check_bingo_result" && main_cashier === "False") {
+                // Show the result that the main cashier sent
+                console.log("Received check result:", data.result);
+                if (data.result.message === "Bingo" || data.result.message === "No Bingo") {
+                    generateResultHTML(data.result, data.game);
+                } else {
+                    alert(data.result.message);
+                }
+            }
+
+            if (data.type === "bingo_result_closed" ) {
+                bonus_c.style.display = "none";
+                free_c.style.display = "none";
+                var resultContainer = document.getElementById("blur-background");
+                while (resultContainer.firstChild) {
+                    resultContainer.removeChild(resultContainer.firstChild);
+                }
+                // Remove the tableContainer itself from its parent node
+                resultContainer.style.display = "none";
+            }
+
+        };
+            
+        socket.onerror = function (e) {
+            console.error("WebSocket error:", e);
+        };
+    
+        socket.onclose = function (e) {
+            console.log("WebSocket connection closed.");
+        };
+    }
+
 });
 
 // Function to toggle light mode and dark mode
@@ -111,6 +248,10 @@ function toggleFullScreen() {
 fullscreen.addEventListener("click", toggleFullScreen);
 
 var callerLanguageSelect = document.getElementById('lang');
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 function setCookie(cookieName, cookieValue, expirationDays) {
     const d = new Date();
@@ -170,7 +311,7 @@ function updateTotalCalled() {
     totalCalledClock.textContent = calledNumbers.length + " CALLED";
 }
 
-function callNumber() {
+async function callNumber() {
     var remainingNumbers = getRemainingNumbers();
     callednumberdisplay.style.display = "block";
 
@@ -183,6 +324,14 @@ function callNumber() {
     var selectedNumber = remainingNumbers[randomIndex];
 
     calledNumbers.push(selectedNumber);
+
+    if (socket && cashier === "True") {
+        socket.send(JSON.stringify({
+            type: "called_number",
+            game_id: game_id.innerText,
+            number: selectedNumber
+        }));
+    }
 
     var numberElement = document.querySelector('.number[data-number="' + selectedNumber + '"]');
     if (numberElement) {
@@ -210,7 +359,8 @@ function callNumber() {
 
       // Create the desired string format by inserting a space between characters
     var resultStr = numStr.split('').join(' ');
-    var displayedNumber = letter + (selectedNumber) + ", " + letter + "," + resultStr; // Calculate the displayed number
+    var displayedNumber = letter + (selectedNumber);
+    var splitedNumber =  letter + "," + resultStr; // Calculate the displayed number
     // This will log: "1 5"
 
     selectedLanguage = getLanguage();
@@ -225,6 +375,9 @@ function callNumber() {
     }else{
         speech.voice = voices[0];
         speech.text = displayedNumber;
+        window.speechSynthesis.speak(speech);
+        await sleep(1000);
+        speech.text = splitedNumber;
         window.speechSynthesis.speak(speech);
     }
 
@@ -292,7 +445,6 @@ var finshbtn = document.getElementById('finsh');
 var newgamebtn = document.getElementById('start-new-game');
 var shuffle_btn = document.getElementById('shuffle');
 var check_btn = document.getElementById('check-btn');
-var game_id = document.getElementById("game-id");
 
 startbtn.onclick = function(){
     selectedLanguage = getLanguage();
@@ -332,35 +484,54 @@ startbtn.onclick = function(){
 };
 
 function startAuto() {
+    if (socket && cashier === "True") {
+        socket.send(JSON.stringify({
+            type: "start_auto_play",
+            game_id: game_id.innerText
+        }));
+        console.log("Auto play started");
+    }else{
+
+        if (autoIntervalId) {
+            clearInterval(autoIntervalId);
+            autoIntervalId = null;
+            alert("Stopped");
+            return;
+        }
+    
+        autoIntervalId = setInterval(function () {
+            callNumber();
+            var remainingNumbers = getRemainingNumbers();
+            if (remainingNumbers.length === 0) {
+                clearInterval(autoIntervalId);
+                autoIntervalId = null;
+            }
+        }, callinginterval);
+        autoPlaying = true;
+
+    }
+
     callnextbtn.classList.add('inactive');
     shuffle_btn.classList.add('inactive');
     finshbtn.classList.add('inactive');
     check_btn.classList.add('inactive');
 
-    if (autoIntervalId) {
-        clearInterval(autoIntervalId);
-        autoIntervalId = null;
-        alert("Stopped");
-        return;
-    }
-
-    autoIntervalId = setInterval(function () {
-        callNumber();
-        var remainingNumbers = getRemainingNumbers();
-        if (remainingNumbers.length === 0) {
-            clearInterval(autoIntervalId);
-            autoIntervalId = null;
-        }
-    }, callinginterval);
-    autoPlaying = true;
 }
 
 function stopAuto() {
-    finshbtn.classList.remove('inactive');
-    check_btn.classList.remove('inactive');
-    clearInterval(autoIntervalId);
-    autoIntervalId = null;
-    autoPlaying = false;
+    
+    if (socket && cashier === "True") {
+        socket.send(JSON.stringify({
+            type: "stop_auto_play",
+            game_id: game_id.innerText
+        }));
+    }else{
+        finshbtn.classList.remove('inactive');
+        check_btn.classList.remove('inactive');
+        clearInterval(autoIntervalId);
+        autoIntervalId = null;
+        autoPlaying = false;
+    }
 }
 
 function getRemainingNumbers() {
@@ -410,47 +581,66 @@ check_btn.onclick = function () {
     const check_num = document.getElementById('check-num').value;
     if (check_num.trim() === "") {
         alert("Input field cannot be empty");
-        return false; // Prevent form submission
-    }else{
-        checkBingo(check_num);
+        return false;
+    } else {
+        // First: send to other cashiers over the WebSocket
+        if (socket && cashier === "True" && main_cashier === "False") {
+            socket.send(JSON.stringify({
+                type: "check_bingo_request",
+                number: check_num,
+                game_id: game_id.innerText
+            }));
+        }
+
+        // If this cashier is the main, send the AJAX check to server
+        if (main_cashier === "True") {
+            checkBingo(check_num);
+        }
     }
 }
 
 function checkBingo(num) {
-    // Make an AJAX request to your Django view to fetch the updated list of selected numbers
-    const patterns = JSON.parse(decodeURIComponent(getCookie("Patterns")));
-    console.log(patterns);
     $.ajax({
-      url:  "/check/",  // Replace with your Django view URL
-      type: "GET",
-      data: {
-        card: num,
-        called: JSON.stringify(calledNumbers),
-        game: game_id.innerText,
-        patterns: JSON.stringify(patterns),
-        // Add more parameters as needed
-    },
-      success: function(response) {
-        // Disable buttons based on the received list of selected numbers
+        url: "/check/",
+        type: "GET",
+        data: {
+            card: num,
+            called: JSON.stringify(calledNumbers),
+            game: game_id.innerText
+        },
+        success: function (response) {
+            var result = response.result;
 
-        var result = response.result;
+            if (result[0].message === "Bingo" || result[0].message === "No Bingo") {
+                generateResultHTML(result[0], response.game);
+            } else {
+                alert(result[0].message);
+            }
 
-        if (result[0].message == "Bingo" || result[0].message == "No Bingo"){
-            generateResultHTML(result[0],response.game);
-        }else{
-            alert(result[0].message);
+            // After getting the result from server, send it to other cashiers via WebSocket
+            if (socket && cashier === "True" ) {
+                socket.send(JSON.stringify({
+                    type: "check_bingo_result",
+                    result: result[0],
+                    game: response.game
+                }));
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error("Failed to check result", error);
         }
-        
-      },
-      error: function(xhr, status, error) {
-        console.error("Failed to check result", error);
-      }
     });
-  }
+}
 
   function generateResultHTML(cardResult,game) {
     var resultContainer = document.getElementById("blur-background");
     resultContainer.style.display = "block";
+
+    //✨ Clear any existing content first
+    while (resultContainer.firstChild) {
+        resultContainer.removeChild(resultContainer.firstChild);
+    }
+
     var resultDiv = document.createElement("div");
     resultDiv.className = "result-container";
   
@@ -557,6 +747,13 @@ function checkBingo(num) {
             }
             // Remove the tableContainer itself from its parent node
             resultContainer.style.display = "none";
+
+            if (socket.readyState === WebSocket.OPEN && cashier === "True") {
+                socket.send(JSON.stringify({
+                    type: "close_bingo_result",
+                    card_name: cardResult.card_name
+                }));
+            }
         });
         tableContainer.appendChild(closeButton);
 
@@ -570,6 +767,8 @@ function checkBingo(num) {
             tableContainer.appendChild(blockButton);
 
         }
+
+        view_pay(cardResult.cashiers);
 
         // Appending buttons to the tableContainer
   
@@ -622,6 +821,14 @@ function checkBingo(num) {
             }
             // Remove the tableContainer itself from its parent node
             resultContainer.style.display = "none";
+
+            if (socket.readyState === WebSocket.OPEN && cashier === "True") {
+                socket.send(JSON.stringify({
+                    type: "close_bingo_result",
+                    card_name: cardResult.card_name
+                }));
+            }
+
         });
 
         var blockButton = document.createElement("button");
@@ -658,6 +865,13 @@ $.ajax({
     }
     // Remove the tableContainer itself from its parent node
     resultContainer.style.display = "none";
+
+    if (socket.readyState === WebSocket.OPEN && cashier === "True") {
+        socket.send(JSON.stringify({
+            type: "close_bingo_result",
+            card_name: cardResult.card_name
+        }));
+    }
       
     },
     error: function(xhr, status, error) {
@@ -835,3 +1049,36 @@ closeViewAllCalled.onclick = function () {
     var resultContainer = document.getElementById("blur-background");
     resultContainer.style.display = "none";
 };
+
+function view_pay(response){
+    pay.style.display = 'block';
+
+    pay.innerHTML = '';
+
+    // Create a container for the cashier stats
+    const container = document.createElement('div');
+    container.classList.add('cashier-container');
+
+    // Create the stat boxes for each cashier
+    response.forEach(cashier => {
+        const cashierBox = document.createElement('div');
+        cashierBox.classList.add('cashier-box');
+
+        const name = document.createElement('h3');
+        name.textContent = cashier.name;
+
+        const paid = document.createElement('p');
+        paid.textContent = `Paid: ${cashier.paid}`;
+
+        cashierBox.appendChild(name);
+        cashierBox.appendChild(paid);
+
+        container.appendChild(cashierBox);
+    });
+
+    // Append the container to the pay div
+    pay.appendChild(container);
+    var resultContainer = document.getElementById("blur-background");
+    resultContainer.appendChild(pay);
+    
+}

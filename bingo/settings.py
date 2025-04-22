@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'game',
     'agent',
     'cashier',
+    'channels',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -65,7 +66,17 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
+
+ASGI_APPLICATION = 'bingo.asgi.application'
+
+# Use in-memory channel layer for local dev
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    },
+}
 
 ROOT_URLCONF = 'bingo.urls'
 
@@ -97,7 +108,7 @@ DATABASES = {
         'NAME': 'dallol_bingo_db',
         'USER': 'dallol',
         'PASSWORD': 'Byihun@123',
-        'HOST': 'localhost',  # Typically localhost for shared hosting
+        'HOST': '49.13.146.224',  # Typically localhost for shared hosting
         'PORT': '5432',           # Leave empty if default port 5432 is used
         'CONN_MAX_AGE': 600,
     }
@@ -159,7 +170,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-LOGIN_URL = 'https://dallolbingohouse.com/account/login/'
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+LOGIN_URL = 'http://127.0.0.1:8000/account/login/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

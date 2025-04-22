@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     path('',views.agent_index_view,name="agent_index"),
     path('add_shop/',views.add_shop,name="add_shop"),
+    path('add_cahsier/',views.add_cashier,name="add_cashier"),
     path('super_admin/add_agent/',views.add_agent,name="add_agent"),
     path('get_shops_stat/',views.get_shop_stat,name="get_shops_stat"),
     path('super_admin/view_agent/<int:id>/get_shops_stat/',views.admin_get_shop_stat,name="admin_get_shops_stat"),

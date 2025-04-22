@@ -21,9 +21,10 @@
     </div>
     <div id="game" style="display: none;">{{game}}</div>
     <div id="cashier" style="display: none;">{{cashier}}</div>
+    <div id="shop" style="display: none;">{{user.id}}</div>
     <form id="game-form" action="{% url 'new_game' %}">{% csrf_token %}
     <div class="input-section">
-      <div class="input-group">
+      <div {% if profile.display_info %} {% else %} style="display: none;" {% endif %} class="input-group">
         <label for="win">Game: </label>
         <input type="number" value = "{{counter.game_counter}}"id="game" readonly>
       </div>
@@ -31,7 +32,8 @@
         <label for="stake">Bet Birr: </label>
         <input type="number" id="stake" name="stake" min="{{acc.min_stake}}" max="10000" value="{{acc.min_stake}}" placeholder="">
       </div>
-      <div class="input-group">
+      
+      <div {% if profile.display_info %} {% else %} style="display: none;" {% endif %} class="input-group">
         <label for="win">No. of players: </label>
         <input type="number" id="noplayer" readonly>
       </div>
@@ -47,7 +49,7 @@
         <label for="win">Free Hit: </label>
         <input type="checkbox" name="free" id="free">
       </div>
-      <div class="input-group">
+      <!-- <div class="input-group">
         <div class="custom-select">
             <div class="select-box">
                 <span id="selectedPatterns">Choose Patterns</span>
@@ -59,7 +61,7 @@
                 <div class="option" data-value="4">Inside box</div>
             </div>
         </div>
-      </div>
+      </div> -->
     </div>
     
     <div id="container" class="grid-container">

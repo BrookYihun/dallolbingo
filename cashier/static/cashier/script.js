@@ -8,6 +8,7 @@ const pay = document.getElementById('pay');
 var other_selected = [];
 var stake = 0;
 var mycolor = "";
+var gameId = "";
 
 let intervalId;
 
@@ -71,6 +72,38 @@ clearbtn.addEventListener('click',()=>{
     selectedNumbers=[];
 });
 
+
+function add_player(card){
+    const cardId = parseInt(card, 10);
+    if (!selectedNumbers.includes(cardId)) {
+        selectedNumbers.push(cardId);
+    }
+
+    if (socket.readyState === WebSocket.OPEN ) {
+        socket.send(JSON.stringify({
+            type: 'add_player',
+            card: card,
+            game: gameId
+        }));
+    }
+}
+
+function remove_player(card){
+    const cardId = parseInt(card, 10);
+    const index = selectedNumbers.indexOf(cardId);
+    if (index !== -1) {
+        selectedNumbers.splice(index, 1);
+    }
+
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+            type: 'remove_player',
+            card: card,
+            game: gameId,
+        }));
+    }
+}
+
 function add(){
      for (let i = 101; i <= 200; i++) {
       const box = document.createElement('div');
@@ -101,67 +134,28 @@ function remove(){
     }
 }
 
-function get_game_stat(){
+function get_game_stat() {
     $.ajax({
-        url:  "/cashier/get_game_stat/",  // Replace with your Django view URL
+        url: "/cashier/get_game_stat/",
         type: "GET",
         success: function(response) {
-            if (response.message === 'None') {
-                main.classList.add('inactive');
-            }else if(response.message === 'PLAYING'){
-                main.classList.add('inactive');
-                pay.style.display = 'block';
+            pay.style.display = 'none';
+            document.getElementById('acc').value = response.balance;
 
-                pay.innerHTML = '';
-
-                // Create a container for the cashier stats
-                const container = document.createElement('div');
-                container.classList.add('cashier-container');
-
-                // Create the stat boxes for each cashier
-                response.cashiers.forEach(cashier => {
-                    const cashierBox = document.createElement('div');
-                    cashierBox.classList.add('cashier-box');
-
-                    const name = document.createElement('h3');
-                    name.textContent = cashier.name;
-
-                    const collected = document.createElement('p');
-                    collected.textContent = `Collected: ${cashier.collected}`;
-
-                    const paid = document.createElement('p');
-                    paid.textContent = `Paid: ${cashier.paid}`;
-
-                    cashierBox.appendChild(name);
-                    cashierBox.appendChild(collected);
-                    cashierBox.appendChild(paid);
-
-                    container.appendChild(cashierBox);
-
-                    clearInterval(intervalId);
-                });
-
-                // Append the container to the pay div
-                pay.appendChild(container);
-
-            }else {
-                main.classList.remove('inactive');
-                pay.style.display = 'none';
-                document.getElementById('acc').value =response.balance;
-                document.getElementById('game').value = response.game.id;
-                selectedNumbersStr = Array.isArray(response.selected_players) ? response.selected_players : [];
-                selectedNumbers = selectedNumbersStr.map(str => parseInt(str, 10));
-                stake = response.game.stake;
-                document.getElementById('noplayer').value = selectedNumbers.length;
-                document.getElementById('collected').value = selectedNumbers.length * stake;
-                update_view(response.other_selected);
+            if (gameId !== response.game.id) {
+                gameId = response.game.id;
+                connectWebSocket(document.getElementById('shop').value, gameId); // Reconnect WebSocket
             }
+
+            document.getElementById('game').value = gameId;
+            stake = response.game.stake;
         },
         error: function(xhr, status, error) {
-          alert("Failed to get data");
+            alert("Failed to get data");
         }
-      });
+    });
 }
+
 
 function arraysEqual(arr1, arr2) {
     if (arr1.length !== arr2.length) return false;
@@ -172,7 +166,22 @@ function arraysEqual(arr1, arr2) {
   }
   
 
+  function update_visuals(){
+    const boxes = document.querySelectorAll('.box');
 
+    boxes.forEach(function(box) {
+        const number = parseInt(box.innerText.trim(), 10);
+
+        // Clear all extra styles first
+        box.className = "box";
+
+        if (selectedNumbers.includes(number)) {
+            box.classList.add('selected');
+        } else if (other_selected.includes(number)) {
+            box.classList.add('blured', 'color1');  // color2 or use dynamic color
+        }
+    });
+}
 
 function update_view(players){
     var boxes = document.querySelectorAll('.box');
@@ -209,58 +218,95 @@ function update_view(players){
 
 }
 
-function remove_player(card){
-    var game = document.getElementById('game').value;
-    $.ajax({
-        url:  "/cashier/remove_player/",  // Replace with your Django view URL
-        type: "GET",
-        data: {
-            card: card,
-            game: game,
-            // Add more parameters as needed
-        },
-        success: function(response) {
-            if (response.status === 'success') {
-
-            } else if (response.status === 'failure' || response.status === 'error') {
-                alert(response.message);
-            }
-        },
-        error: function(xhr, status, error) {
-          alert("Failed to get data");
-        }
-      });
-}
-
-function add_player(card){
-    var game = document.getElementById('game').value;
-    $.ajax({
-        url:  "/cashier/add_player/",  // Replace with your Django view URL
-        type: "GET",
-        data: {
-            card: card,
-            game: game,
-            // Add more parameters as needed
-        },
-        success: function(response) {
-            if (response.status === 'success') {
-
-            } else if (response.status === 'failure' || response.status === 'error') {
-                alert(response.message);
-            }
-        },
-        error: function(xhr, status, error) {
-          alert("Failed to get data");
-        }
-      });
-}
-
 // Create number boxes
 
 
 // ... Your existing JavaScript ...
 
 // Inside the form submission event listener
+
+let socket = null;
+
+function connectWebSocket(shop, gameId) {
+    if (socket) {
+        socket.close(); // Close existing connection before creating new one
+    }
+
+    socket = new WebSocket(`ws://${window.location.host}/ws/game/${shop}/${gameId}/`);
+
+    socket.onopen = function () {
+        console.log(`Connected to WebSocket for game ${gameId}`);
+    };
+
+    socket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+        const cardId = parseInt(data.card, 10);
+
+        if (data.action === 'current_game' && data.state === "pending") {
+            if (gameId !== data.game_id) {
+                gameId = data.game_id;
+                get_game_stat();           // Refresh UI/stake info
+                connectWebSocket(shop, gameId);  // Reconnect WebSocket
+            }
+        }
+
+        if (data.action === 'existing_selected_cards') {
+            const cardMap = data.cards_by_cashier;
+            const myCards = data.selected_cards || [];
+        
+            // Update current user's selected cards
+            selectedNumbers = myCards;
+            
+            const newOtherSelected = [];
+        
+            cardMap.forEach((entry) => {
+                const { cashier_id, cards } = entry;
+            
+                if (Array.isArray(cards)) {
+                    cards.forEach((cardId) => {
+                        if (!newOtherSelected.includes(cardId) && !selectedNumbers.includes(cardId)) {
+                            newOtherSelected.push(cardId);
+                        }
+                    });
+                } else {
+                    console.warn("Expected cards to be an array, but got:", cards);
+                }
+            });
+            
+            other_selected = newOtherSelected;
+            update_visuals();
+        }
+
+        if (data.action === 'player_added') {
+            if (!other_selected.includes(cardId) && !selectedNumbers.includes(cardId)) {
+                other_selected.push(cardId);
+            }
+        }
+
+        if (data.action === 'player_removed') {
+            const index = other_selected.indexOf(cardId);
+            if (index !== -1) {
+                other_selected.splice(index, 1);
+            }
+        }
+
+        if (data.action === 'game_started' && data.game_id) {
+            // Redirect user to the cashier_bingo page
+            window.location.href = `/bingo/${data.game_id}/`;
+        }
+
+        update_visuals();
+    };
+
+    socket.onerror = function (e) {
+        console.error("WebSocket error:", e);
+    };
+
+    socket.onclose = function (e) {
+        console.log("WebSocket closed.");
+    };
+}
+
 
 window.onload = function() {
     for (let i = 1; i <= 100; i++) {
@@ -270,19 +316,24 @@ window.onload = function() {
         
         box.addEventListener('click', () => {
             if (selectedNumbers.includes(i)) {
-                selectedNumbers = selectedNumbers.filter(num => num !== i);
-                box.className = "box";
-                remove_player(i);
+                if(gameId!=""){
+                    selectedNumbers = selectedNumbers.filter(num => num !== i);
+                    box.className = "box";
+                    remove_player(i);
+                }
             } else {
-                selectedNumbers.push(i);
-                box.classList.add('selected');
-                add_player(i);
+                if(gameId!=""){
+                    selectedNumbers.push(i);
+                    box.classList.add('selected');
+                    add_player(i);
+                }
             }
         });
 
         container.appendChild(box);
     }
+    get_game_stat();
 
-    intervalId = setInterval(get_game_stat, 1000);
+    // intervalId = setInterval(get_game_stat, 1000);
 
   };

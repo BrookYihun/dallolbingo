@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="{% static 'account/css/styles2.css' %}">
 <link rel="stylesheet" href="{% static 'game/css/lightpick.css' %}">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
-<script src="{% static "game/js/lightpick.js" %}"></script>
+<script src="{% static 'game/js/lightpick.js' %}"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
@@ -75,20 +75,47 @@
                   </div>
                   <!------------------------------>
                   <!------------------------------>
+                  <div class="info-row p-20 d-flex align-center f-wrap" style="height: 250px;">
+                    <h4 class="c-grey fs-15 m-0 w-full">Game Patterns</h4>
+                    <div class="fs-14">
+                      <ul id="selectedPatternsList">
+                        {% for pattern in pattern_names %}
+                            <li>{{ pattern }}</li>
+                        {% empty %}
+                            <li>No patterns selected.</li>
+                        {% endfor %}
+                      </ul>
+                    </div> 
+                    <div class="fs-14">
+                      <span class="c-grey">Choose patterns to play:</span>
+                    </div>
+                    <div class="custom-select">
+                      <div class="select-box">
+                          <span id="selectedPatterns">Choose Patterns</span>
+                      </div>
+                      <div class="options-container">
+                        <div class="option {% if '1' in profile.patterns %}selected{% endif %}" data-value="1">Lines</div>
+                        <div class="option {% if '2' in profile.patterns %}selected{% endif %}" data-value="2">Diagonals</div>
+                        <div class="option {% if '3' in profile.patterns %}selected{% endif %}" data-value="3">Outside box</div>
+                        <div class="option {% if '4' in profile.patterns %}selected{% endif %}" data-value="4">Inside box</div>
+                    </div>
+                    
+                  </div>
                   <div class="info-row p-20 d-flex align-center f-wrap">
                     <h4 class="c-grey fs-15 m-0 w-full">Game Information</h4>
                     <div class="fs-14">
                       <span class="c-grey">Display Game Information:</span>
-                      <span>ON</span>
+                      <span id="display_text">{% if profile.display_info %}ON{%else%}OFF{% endif %}</span>
                     </div>
                     <div class="fs-14">
                       <label>
-                        <input class="toggle-checkbox" type="checkbox" checked>
+                        <input class="toggle-checkbox" type="checkbox" id="display_checkbox" {% if profile.display_info %}checked{% endif %}>
                         <div class="toggle-switch relative"></div>
                       </label>
                     </div>
-                  </div>
                 </div>
+              </div>
+              <button type="submit" id="start-button">Save</button>
               </div>
             </div>
         </div>

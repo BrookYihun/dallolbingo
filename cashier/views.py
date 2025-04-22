@@ -14,7 +14,7 @@ def index(request):
     try:
         cashier = Cashier.objects.get(user=request.user)
         if cashier is not None:
-            return render (request,'cashier/select_card.html',{'cashier':cashier.name})
+            return render (request,'cashier/select_card.html',{'cashier':cashier.name,'shop':cashier.shop.id})
     except:
         return redirect('index')
 
@@ -28,32 +28,18 @@ def get_game_stat(request):
                 last_game = last_cashier_game.game
 
                 # Check if the last game's played field is 'STARTED'
-                if last_game.played == 'STARTED':
-                    other_cashiers = CashierGame.objects.filter(game=last_game)
-                    selcted_players = []
-                    for other_cashier in  other_cashiers:
-                        if(cashier.user!=other_cashier.user):
-                            selcted_players.extend(other_cashier.get_card_numbers())
-                    balance = cashier.balance
 
-                    cashier_stat_list = [{'num': i, 'name': cas.user.username, 'selected_players': cas.get_card_numbers()} for i, cas in enumerate(other_cashiers, start=1)]
+                balance = cashier.balance
 
-                    context = {
-                        'balance':balance,
-                        'game': {
-                            'id': last_game.id,
-                            'played': last_game.played,
-                            'stake': last_game.stake
-                        },
-                        'other_selected': cashier_stat_list,
-                        'selected_players': last_cashier_game.get_card_numbers()
-                    }
-                    return JsonResponse(context)
-                if last_game.played == 'PLAYING':
-                    cashiers = CashierGame.objects.filter(game=last_game)
-                    cashier_data = [{'name': cashier.user.username, 'collected': cashier.collected, 'paid': cashier.pied} for cashier in cashiers]
-                    context = {'cashiers':cashier_data,'message':'PLAYING'}
-                    return JsonResponse(context)
+                context = {
+                    'balance':balance,
+                    'game': {
+                        'id': last_game.id,
+                        'played': last_game.played,
+                        'stake': last_game.stake
+                    },
+                }
+                return JsonResponse(context)
         context = {'message': 'None'}
         return JsonResponse(context)
     except Exception as e:

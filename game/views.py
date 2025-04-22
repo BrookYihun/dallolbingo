@@ -6,7 +6,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
-from account.models import Account, UserGameCounter
+from account.models import Account, Profile, UserGameCounter
 from agent.models import Agent
 from cashier.models import Cashier
 from game.models import Card, CashierGame, Game, UserGame
@@ -26,10 +26,25 @@ def index(request):
     letters = ['B', 'I', 'N', 'G', 'O']
     numbers_per_row = 15
     bingo_rows = []
+    shop = None
+    # Check if the user is in the Account database and if they are a main cashier
+    try:
+        account = Account.objects.get(user=request.user)
+        shop = account
+
+    except Account.DoesNotExist:
+        # If user is not in Account, check in the Cashier table
+        try:
+            cashier = Cashier.objects.get(user=request.user)
+            shop = cashier.shop  # Get the shop label from Cashier
+        except Cashier.DoesNotExist:
+            # If user is neither in Account nor Cashier, set shop to None
+            shop = None
+
     for letter in letters:
         row_numbers = numbers[:numbers_per_row]
         numbers = numbers[numbers_per_row:]
-        bingo_rows.append({'letter': letter, 'numbers': row_numbers})
+        bingo_rows.append({'letter': letter, 'numbers': row_numbers,'cashier':False,'main':True,'shop': shop.id})
 
     context = {'bingoRows': bingo_rows}
     return render(request,'game/index.html',context)
@@ -58,14 +73,6 @@ def new_game_view(request):
             game.bonus = bonus
             game.free = free
             game.save()
-            user_games = UserGame.objects.filter(user=request.user)
-            user_game_count = user_games.count()
-            if not user_games.filter(game=game).exists():
-                user_game = UserGame.objects.create(game=game, user=request.user, game_number=user_game_count + 1)
-                user_game.save()
-                user_game_counter = UserGameCounter.objects.get(user=request.user)
-                user_game_counter.increment_game_counter()
-                user_game_counter.save()
             time = datetime.now()
             formatted_time = time.strftime('%Y-%m-%d %H:%M:%S')
             players = []
@@ -159,12 +166,31 @@ def new_game_view(request):
                 row_numbers = numbers[:numbers_per_row]
                 numbers = numbers[numbers_per_row:]
                 bingo_rows.append({'letter': letter, 'numbers': row_numbers})
-            context = {'bingo_cards': bingo_cards, 'game': game,'game_counter':user_game_counter, 'players': players,'bingoRows': bingo_rows}
+            context = {'bingo_cards': bingo_cards, 'game': game,'game_counter':user_game_counter, 'players': players,'bingoRows': bingo_rows,'cashier':False,'main':True,'shop': acc.id}
             return render(request,'game/index.html',context)
         except ValueError:
             return HttpResponse('Error')
     acc = Account.objects.get(user= request.user)
-    game = Game.objects.create()
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    last_game = UserGame.objects.filter(user=request.user).order_by('-created_at').first()
+    game = None
+    if last_game:
+        if last_game.game.played == "STARTED":
+            game = last_game.game
+        else:
+            game = Game.objects.create()
+    else:
+        game = Game.objects.create()
+    
+    user_games = UserGame.objects.filter(user=request.user)
+    user_game_count = user_games.count()
+    if not user_games.filter(game=game).exists():
+        user_game = UserGame.objects.create(game=game, user=request.user, game_number=user_game_count + 1)
+        user_game.save()
+        user_game_counter = UserGameCounter.objects.get(user=request.user)
+        user_game_counter.increment_game_counter()
+        user_game_counter.save()
+        
     today_game_counter = UserGameCounter.objects.get(user=request.user)
     game.stake = 20
     game.save()
@@ -173,10 +199,64 @@ def new_game_view(request):
     if cashiers.count() > 1:
         is_cashier = True
         for cashier in cashiers:
-            cashier_game = CashierGame.objects.create(user=cashier.user,game=game)
-            cashier_game.save()
+            if not CashierGame.objects.filter(user=cashier.user, game=game).exists():
+                cashier_game = CashierGame.objects.create(user=cashier.user,game=game)
+                cashier_game.save()
             
-    return render(request, 'game/new_game.html',{'counter':today_game_counter,'acc':acc,'game':game.id,'cashier':is_cashier,'cashiers':cashiers})
+    return render(request, 'game/new_game.html',{'counter':today_game_counter,'acc':acc,'game':game.id,'cashier':is_cashier,'cashiers':cashiers,'profile':profile})
+
+@login_required
+def cashier_bingo(request, game_id):
+    game = Game.objects.get(id=game_id)
+    players = json.loads(game.playerCard)
+    bingo_cards = Card.objects.exclude(id__in=[p['card'] for p in players])
+    
+    # Initialize main and shop
+    main = False
+    shop = None
+    user_game_counter = None
+    
+    # Check if the user is in the Account database and if they are a main cashier
+    try:
+        account = Account.objects.get(user=request.user)
+        user_game_counter = UserGameCounter.objects.get(user=request.user)
+        shop = account
+        main = True  # If user is in Account, they are a main cashier
+
+    except Account.DoesNotExist:
+        # If user is not in Account, check in the Cashier table
+        try:
+            cashier = Cashier.objects.get(user=request.user)
+            shop = cashier.shop  # Get the shop label from Cashier
+        except Cashier.DoesNotExist:
+            # If user is neither in Account nor Cashier, set shop to None
+            shop = None
+        main = False  # If not in Account, they are not a main cashier
+
+    # Generate bingo rows as before
+    numbers = range(1, 76)
+    letters = ['B', 'I', 'N', 'G', 'O']
+    numbers_per_row = 15
+    bingo_rows = []
+    for letter in letters:
+        row_numbers = numbers[:numbers_per_row]
+        numbers = numbers[numbers_per_row:]
+        bingo_rows.append({'letter': letter, 'numbers': row_numbers})
+    
+    # Add the account and shop information to the context
+    context = {
+        'bingo_cards': bingo_cards,
+        'game': game,
+        'game_counter': user_game_counter,
+        'players': players,
+        'bingoRows': bingo_rows,
+        'cashier': True,
+        'main': main,  # Add the main field to the context
+        'shop': shop.id   # Add the shop label (from Cashier or None)
+    }
+    
+    return render(request, 'game/index.html', context)
+
 
 @login_required
 def game_stat(request):
@@ -280,12 +360,12 @@ def update_stake(request):
 def check_winner_view(request):
     card_id = request.GET.get('card')
     called_numbers_str = request.GET.get('called')
-    patterns_str = request.GET.get('patterns',[])
+    # patterns_str = request.GET.get('patterns',[])
 
     # Parse the string representation of the list into an actual list
     called_numbers = json.loads(called_numbers_str)
     gameId = request.GET.get('game')
-    patterns = json.loads(patterns_str)
+    profile, created = Profile.objects.get_or_create(user=request.user)
     if not called_numbers:
         context = {'called': called_numbers, 'message': 'No numbers called yet'}
         return JsonResponse(context)
@@ -301,9 +381,9 @@ def check_winner_view(request):
     if card_found:
         card = Card.objects.get(id=card_id)
         numbers = card.numbers
-        winning_numbers,remaining_number = has_bingo(numbers, called_numbers,patterns)
-        if len(winning_numbers)>0:
-
+        winning_numbers, remaining_number = has_bingo(numbers, called_numbers, profile.patterns)
+        cashier_payouts = []
+        if len(winning_numbers) > 0:
             if not remaining_number:
                 winners = []
                 if game.winners:
@@ -312,6 +392,14 @@ def check_winner_view(request):
                     # Append card.id if it is not in the list
                     winners.append(card.id)
                 game.winners = json.dumps(winners)
+                game.save()
+                cashierGame = CashierGame.objects.filter(game=game)
+                if cashierGame.count() > 1:
+                    for cas in cashierGame:
+                        cashier_payouts.append({
+                            "name": cas.user.username,
+                            "paid": cas.pied,
+                        })
 
             if game.bonus and not remaining_number:
                 if len(called_numbers) == 4:
@@ -335,17 +423,9 @@ def check_winner_view(request):
                 filtered_cards = [c for c in cards if c !=int(card_id) ]
                 # game.shop_cut -= Decimal(game.stake)
                 game.free_hit = random.choice(filtered_cards)
-                cashierGame = CashierGame.objects.filter(game=game)
-                # for cas in cashierGame:
-                #     card_numbers = [int(card) for card in cas.get_card_numbers()]
-                #     if int(game.free_hit) in card_numbers:
-                #         cashier = Cashier.objects.get(user=cas.user)
-                #         cas.collected -= Decimal(game.stake)
-                #         cas.save()
-                #         cashier.decrement_balance(game.stake)
                 game.save()
 
-            result.append({'card_name': card.id, 'message': 'Bingo','free':game.free_hit, 'bonus':game.bonus_payed, 'winning_card': numbers, 'remaining_numbers': remaining_number,'called_numbers': called_numbers,'winning_numbers':winning_numbers,'card':numbers})
+            result.append({'card_name': card.id, 'message': 'Bingo','free':game.free_hit, 'bonus':game.bonus_payed, 'winning_card': numbers, 'remaining_numbers': remaining_number,'called_numbers': called_numbers,'winning_numbers':winning_numbers,'card':numbers,'cashiers':cashier_payouts})
             
         else:
             result.append({'card_name': card.id, 'message': 'No Bingo','card':numbers})

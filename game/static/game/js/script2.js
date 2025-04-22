@@ -10,6 +10,7 @@ const bonus = document.getElementById('bonus');
 const free = document.getElementById('free');
 const cashier = document.getElementById('cashier').innerText;
 var patterns = [];
+let socket = null;
 
 function setCookie(name, value, days) {
     var expires = "";
@@ -106,27 +107,27 @@ function remove(){
     }
 }
 
-// Handle custom select dropdown
-document.querySelector('.select-box').addEventListener('click', function () {
-    const selectBox = this.parentElement;
-    selectBox.classList.toggle('open'); // Toggle open class to show/hide options
-});
+// // Handle custom select dropdown
+// document.querySelector('.select-box').addEventListener('click', function () {
+//     const selectBox = this.parentElement;
+//     selectBox.classList.toggle('open'); // Toggle open class to show/hide options
+// });
 
-// Handle selecting an option
-document.querySelectorAll('.option').forEach(option => {
-    option.addEventListener('click', function () {
-        // Toggle 'selected' class on the clicked option
-        this.classList.toggle('selected');
+// // Handle selecting an option
+// document.querySelectorAll('.option').forEach(option => {
+//     option.addEventListener('click', function () {
+//         // Toggle 'selected' class on the clicked option
+//         this.classList.toggle('selected');
 
-        // Update the displayed selected patterns
-        const selectedPatterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.textContent).join(', ');
-        document.getElementById('selectedPatterns').textContent = selectedPatterns || 'Choose Patterns';
+//         // Update the displayed selected patterns
+//         const selectedPatterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.textContent).join(', ');
+//         document.getElementById('selectedPatterns').textContent = selectedPatterns || 'Choose Patterns';
         
-        // Optionally save the selected values to cookies or send to server
-        patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
+//         // Optionally save the selected values to cookies or send to server
+//         patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
         
-    });
-});
+//     });
+// });
 
 // Create number boxes
 
@@ -142,67 +143,56 @@ gameForm.addEventListener('submit', (e) => {
         return;
     }
 
-    // Create a hidden input element for each selected number
-    selectedNumbers.forEach(number => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'players';
-        input.value = number;
-        gameForm.appendChild(input);
-    });
+    if (cashier=="True") {
+        // Send data via WebSocket if user is a cashier
+        socket.send(JSON.stringify({
+            type: 'start_game',
+            stake: document.getElementById("stake").value,
+            bonus: bonus.checked,
+            free: free.checked,
+        }));
+        console.log('Submitted via WebSocket as cashier');
+    } else {
+        // Handle cookies for non-cashiers
+        deleteCookie("Stake");
+        const v = document.getElementById("stake").value;
+        setCookie("Stake", v, 7);
 
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'game';
-    input.value = game_id;
-    gameForm.appendChild(input);
-    deleteCookie("Stake");
-    var v = document.getElementById("stake").value;
-    setCookie("Stake",v,7);
+        deleteCookie("Bonus");
+        const b = bonus.checked;
+        setCookie("Bonus", b, 7);
 
-    deleteCookie("Bonus");
-    var b = bonus.checked;
-    setCookie("Bonus",b,7);
+        deleteCookie("Free");
+        const f = free.checked;
+        setCookie("Free", f, 7);
 
-    deleteCookie("Free");
-    var f = free.checked;
-    setCookie("Free",f,7);
-    
-    deleteCookie("Patterns");
-    setCookie('Patterns', patterns, 7);
+        // Append hidden inputs for selected numbers
+        selectedNumbers.forEach(number => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'players';
+            input.value = number;
+            gameForm.appendChild(input);
+        });
 
-    // Submit the form to the 'bingo' URL
-    gameForm.method = 'POST';
-    gameForm.submit();
+        const gameInput = document.createElement('input');
+        gameInput.type = 'hidden';
+        gameInput.name = 'game';
+        gameInput.value = game_id;
+        gameForm.appendChild(gameInput);
+
+        // Submit form traditionally
+        gameForm.method = 'POST';
+        gameForm.submit();
+    }
 });
+
 
 function updateTotalSelected() {
     deleteCookie("selectedPlayers");
     setCookie("selectedPlayers",selectedNumbers,7);
     document.getElementById('noplayer').value = selectedNumbers.length;
     //document.getElementById('win').value = selectedNumbers.length * document.getElementById('stake').value;
-}
-
-function get_game_stat(){
-    $.ajax({
-        url:  "/get_game_stat/",  // Replace with your Django view URL
-        type: "GET",
-        data:{
-            game: game_id
-        },
-        success: function(response) {
-            if (response.message === 'None') {
-                
-            } else {
-                selectedNumbersStr = Array.isArray(response.main_selected) ? response.main_selected : [];
-                selectedNumbers = selectedNumbersStr.map(str => parseInt(str, 10));
-                update_view(response.selected_players);
-            }
-        },
-        error: function(xhr, status, error) {
-          alert("Failed to get data");
-        }
-      });
 }
 
 function update_view(players){
@@ -282,26 +272,26 @@ window.onload = function() {
         free.checked = f;
     }
     
-    const selectedPatterns = getCookie("Patterns");
-    if (selectedPatterns) {
-        const selectedValues = getCookie('Patterns') || '[]';
+    // const selectedPatterns = getCookie("Patterns");
+    // if (selectedPatterns) {
+    //     const selectedValues = getCookie('Patterns') || '[]';
     
-        // Loop through all options and mark those that are selected
-        document.querySelectorAll('.option').forEach(option => {
-            if (selectedValues.includes(option.dataset.value)) {
-                option.classList.add('selected'); // Add 'selected' class to pre-selected options
-            }
-        });
+    //     // Loop through all options and mark those that are selected
+    //     document.querySelectorAll('.option').forEach(option => {
+    //         if (selectedValues.includes(option.dataset.value)) {
+    //             option.classList.add('selected'); // Add 'selected' class to pre-selected options
+    //         }
+    //     });
     
-        // Update the displayed selected patterns
-        const selected = selectedValues.map(value => {
-            return document.querySelector(`.option[data-value="${value}"]`).textContent;
-        }).join(', ');
+    //     // Update the displayed selected patterns
+    //     const selected = selectedValues.map(value => {
+    //         return document.querySelector(`.option[data-value="${value}"]`).textContent;
+    //     }).join(', ');
         
-        document.getElementById('selectedPatterns').textContent = selected || 'Choose Patterns';
+    //     document.getElementById('selectedPatterns').textContent = selected || 'Choose Patterns';
         
-         patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
-    }
+    //      patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
+    // }
 
     if(cashier!="True"){
         var selectedPlayersStr = getCookie("selectedPlayers");
@@ -357,87 +347,136 @@ window.onload = function() {
 
     const inputElement = document.getElementById('stake');
 
-    if(cashier=="True"){
-        inputElement.addEventListener('input', (event) => {
-            const currentValue = event.target.value;
-            // Call your function here
-            handleInputChange(currentValue);
-        });
+    if (cashier === "True") {
+        let shop = document.getElementById('shop').value;
+        socket = new WebSocket(`ws://${window.location.host}/ws/game/${shop}/${game_id}/`);
     
-        setInterval(get_game_stat, 1000);
-    }
+        socket.onopen = function (e) {
+            console.log("WebSocket connection established.");
+    
+            // Send create_game message with a random or predefined game ID
+            socket.send(JSON.stringify({
+                type: "create_game",
+                game_id: game_id
+            }));
+        };
+    
+        socket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+            const cardId = parseInt(data.card, 10);
 
-  };
+            if (data.action === 'existing_selected_cards') {
+                const cardMap = data.cards_by_cashier;
+                const myCards = data.selected_cards || [];
+            
+                // Update current user's selected cards
+                selectedNumbers = myCards;
+                
+                const newOtherSelected = [];
+            
+                cardMap.forEach((entry) => {
+                    const { cashier_id, cards } = entry;
+                
+                    if (Array.isArray(cards)) {
+                        cards.forEach((cardId) => {
+                            if (!newOtherSelected.includes(cardId) && !selectedNumbers.includes(cardId)) {
+                                newOtherSelected.push(cardId);
+                            }
+                        });
+                    } else {
+                        console.warn("Expected cards to be an array, but got:", cards);
+                    }
+                });
 
+                startButton.disabled = selectedNumbers.length === 0;                
+                other_selected = newOtherSelected;
+                startButton.disabled = other_selected.length === 0;
 
-function handleInputChange(value) {
-    // Your logic here
-    var game = document.getElementById('game').innerHTML;
-    $.ajax({
-        url:  "/update_stake/",  // Replace with your Django view URL
-        type: "GET",
-        data: {
-            stake: value,
-            game: game,
-            // Add more parameters as needed
-        },
-        success: function(response) {
-            if (response.status === 'success') {
-                console.log(response.message);
-            } else if (response.status === 'failure' || response.status === 'error') {
-                alert(response.message);
+                update_visuals();
             }
-        },
-        error: function(xhr, status, error) {
-          alert("Failed to get data");
-        }
-    });
-}
+    
+            if (data.action === 'player_added') {
+                if (!other_selected.includes(cardId) && !selectedNumbers.includes(cardId)) {
+                    other_selected.push(cardId);
+                }
+            }
+    
+            if (data.action === 'player_removed') {
+                const index = other_selected.indexOf(cardId);
+                if (index !== -1) {
+                    other_selected.splice(index, 1);
+                }
+            }
 
+            if (data.action === 'game_started' && data.game_id) {
+                // Redirect user to the cashier_bingo page
+                window.location.href = `/bingo/${data.game_id}/`;
+            }
+
+            if (data.action === 'success' && data.game_id) {
+                // Redirect user to the cashier_bingo page
+                window.location.href = `/bingo/${data.game_id}/`;
+            }
+    
+            update_visuals();
+        };
+    
+        socket.onerror = function (e) {
+            console.error("WebSocket error:", e);
+        };
+    
+        socket.onclose = function (e) {
+            console.log("WebSocket connection closed.");
+        };
+    }
+};    
 
   
-function remove_player(card){
-    var game = document.getElementById('game').innerHTML;
-    $.ajax({
-        url:  "/remove_player/",  // Replace with your Django view URL
-        type: "GET",
-        data: {
+function add_player(card){
+    const cardId = parseInt(card, 10);
+    if (!selectedNumbers.includes(cardId)) {
+        selectedNumbers.push(cardId);
+    }
+
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+            type: 'add_player',
             card: card,
-            game: game,
-            // Add more parameters as needed
-        },
-        success: function(response) {
-            if (response.status === 'success') {
-                console.log(response.message);
-            } else if (response.status === 'failure' || response.status === 'error') {
-                alert(response.message);
-            }
-        },
-        error: function(xhr, status, error) {
-          alert("Failed to get data");
-        }
-      });
+            game: game_id
+        }));
+    }
 }
 
-function add_player(card){
-    var game = document.getElementById('game').innerHTML;
-    $.ajax({
-        url:  "/add_player/",  // Replace with your Django view URL
-        type: "GET",
-        data: {
+function remove_player(card){
+    const cardId = parseInt(card, 10);
+    const index = selectedNumbers.indexOf(cardId);
+    if (index !== -1) {
+        selectedNumbers.splice(index, 1);
+    }
+
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+            type: 'remove_player',
             card: card,
-            game: game,
-            // Add more parameters as needed
-        },
-        success: function(response) {
-            if (response.status === 'success') {
-                console.log(response.message);
-            } else if (response.status === 'failure' || response.status === 'error') {
-                alert(response.message);
-            }
-        },
-        error: function(xhr, status, error) {
-          alert("Failed to get data");
+            game: game_id,
+        }));
+    }
+}
+
+
+function update_visuals(){
+    const boxes = document.querySelectorAll('.box');
+
+    boxes.forEach(function(box) {
+        const number = parseInt(box.innerText.trim(), 10);
+
+        // Clear all extra styles first
+        box.className = "box";
+
+        if (selectedNumbers.includes(number)) {
+            box.classList.add('selected');
+        } else if (other_selected.includes(number)) {
+            box.classList.add('blured', 'color1');  // color2 or use dynamic color
         }
-      });
+    });
 }

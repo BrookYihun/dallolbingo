@@ -748,6 +748,51 @@ def add_shop(request):
 
 @csrf_exempt
 @login_required
+def add_cashier(request):
+    agent = Agent.objects.get(user=request.user)
+    if agent is not None:
+        if request.method == 'GET':
+            try:
+                shop_id = request.GET['shop_id']
+                name = request.GET['name']
+                user_name = request.GET['user_name']
+                password = request.GET['password']
+
+                # Get shop (Account)
+                shop = Account.objects.get(id=shop_id, agent=agent)
+
+                # Create new user
+                user = User.objects.create_user(
+                    username=user_name,
+                    email=user_name + '@goldenbingos.com',
+                    password=password
+                )
+                user.save()
+
+                # Create cashier
+                cashier = Cashier.objects.create(
+                    user=user,
+                    name=name,
+                    shop=shop
+                )
+                cashier.save()
+
+                context = {'message': f"Cashier {name} added successfully to {shop.name}"}
+                return JsonResponse(context)
+
+            except (Account.DoesNotExist, ValueError, KeyError) as e:
+                context = {'message': 'Error adding cashier: ' + str(e)}
+                return JsonResponse(context)
+
+        return redirect('agent_index')
+    
+    return redirect('index')
+
+
+
+
+@csrf_exempt
+@login_required
 def activate_deactivate_view(request):
     agent = Agent.objects.get(user=request.user)
     if agent is not None:

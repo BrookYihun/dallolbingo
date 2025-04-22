@@ -697,3 +697,70 @@ background-color: #0056b3;
     cursor: pointer;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+#pay {
+    display: none; /* Initially hidden */
+}
+
+#pay .cashier-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 90%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#pay .cashier-box {
+    border: 1px solid #ccc;
+    padding: 20px;
+    margin: 20px;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+#pay .cashier-box h3,
+#pay .cashier-box p {
+    margin: 5px 5px;
+}
+
+#num{
+    position: fixed;
+    top: 99%;
+    left: 99%;
+    transform: translate(-50%, -50%);
+    font-size: 18px;
+}
+
+nav{
+    position: fixed; /* Fixes the navbar at the top */
+    top: 0; /* Aligns it to the top of the page */
+    left: 0; /* Aligns it to the left of the page */
+    width: 100%; /* Makes the navbar span the full width of the viewport */
+    background-color: #ffffff; /* Dark background color for the navbar */
+    color: #000000; /* White text color */
+    display: flex; /* Use flexbox to align items */
+    justify-content: space-between; /* Space out items */
+    align-items: center; /* Vertically center items */
+    padding: 10px 20px; /* Add some padding for spacing */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); /* Shadow effect */
+    z-index: 1000; /* Ensure the navbar is above other content */
+}
+
+.name{
+    font-size: 25px;
+    margin-left: 10px;
+}
+
+.green{
+    color: #2fe91e;
+}
+
+.yellow{
+    color: #dbcd0a;
+}
+
+.red{
+    color: #870e00;
+}

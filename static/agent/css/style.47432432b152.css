@@ -1,0 +1,341 @@
+@font-face {
+    font-family: 'jaro';
+    src: url("/static/game/fonts/Jaro/jaro.c7a597ee3c4e.ttf") format('truetype');
+    /* You can add additional font formats for cross-browser compatibility */
+}
+@font-face {
+    font-family: 'teko';
+    src: url("/static/game/fonts/Teko/teko.4d23bd0f4a6b.ttf") format('truetype');
+    /* You can add additional font formats for cross-browser compatibility */
+}
+@font-face {
+    font-family: 'poetsen';
+    src: url("/static/game/fonts/Poetsen/poetsen.70d652137315.ttf") format('truetype');
+    /* You can add additional font formats for cross-browser compatibility */
+}
+
+.loader-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Create the loader dot */
+.loader {
+    position: relative;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color: #e9df1a;
+    display: inline-block;
+    margin: 0 5px;
+    animation: loader-animation 1.5s infinite;
+}
+
+/* Animation for the loader */
+@keyframes loader-animation {
+    0%, 50%, 100% {
+        transform: translateY(0);
+    }
+    25% {
+        transform: translateY(-10px);
+    }
+    75% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Stagger the animation for each dot */
+.loader:nth-child(2) {
+    animation-delay: 0.5s;
+}
+.loader:nth-child(3) {
+    animation-delay: 1s;
+}
+body {
+    font-family: 'poetsen', sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+.header {
+    background-color: #017299;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+}
+
+input,select {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.logout-button {
+    font-family: 'poetsen', sans-serif;
+    background-color: #f44336;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 16px 8px 16px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.container {
+    margin: 20px;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 20px 0;
+}
+
+.stat-box {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding: 20px; /* Increase padding for a larger size */
+    text-align: center;
+    font-size: 20px;
+    flex-basis: calc(33.33% - 20px);
+    margin: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Add shadow */
+    transition: transform 0.3s, box-shadow 0.3s; /* Smooth transition effect on transform and box-shadow */
+}
+
+.stat-box h3{
+    font-size: 30px;
+}
+
+.stat-box:hover {
+    transform: scale(1.05); /* Enlarge the element on hover */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.4); /* Increase the shadow on hover */
+}
+
+
+.table_dispay {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table_dispay th, .table_dispay td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: center;
+}
+
+.table_dispay th {
+    background-color: #017299;
+    color: #fff;
+}
+
+.table_dispay tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+.pagination-button {
+    background-color: #017299;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    margin: 5px;
+    transition: background-color 0.3s;
+}
+
+#paginationButtons {
+    text-align: right;
+}
+.pagination-button:hover {
+    background-color: #7b7b7b; /* Change background color on hover */
+}
+.navbar {
+    background-color: #017299;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.navbar ul {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 0;
+}
+
+.navbar li {
+    display: inline;
+    margin-right: 20px;
+}
+
+.navbar a {
+    text-decoration: none;
+    color: #fff;
+    font-size: 16px; /* Set the default font size */
+    transition: font-size 0.2s; /* Add a smooth transition effect */
+}
+
+.navbar a:hover {
+    font-size: 18px; /* Increase the font size on hover */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.text-muted th, td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: center;
+}
+
+.text-muted th {
+    background-color: #017299;
+    color: #fff;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.blur-background {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+    backdrop-filter: blur(5px); /* Apply blur effect */
+    z-index: 999; /* Ensure it's above other content */
+}
+
+.blur-container{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.5%;
+}
+.form-layout{
+    font-size: 18px;
+    padding: 10px 10px;
+    color: #000000;
+    text-align: center;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    align-items: center;
+    background-color: #ffffff;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 10px;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.nav-form{
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    margin: auto;
+    margin-right: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background-color: transparent;
+}
+
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    width: 5%;
+}
+
+input[type="text"],
+input[type="number"],select {
+    width: 95%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+input[type="checkbox"] {
+    width: 20px; /* Set the width of the checkbox */
+    height: 20px; /* Set the height of the checkbox */
+    margin-right: 5px;
+}
+
+.form-btn {
+  background-color: #f44336;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-decoration: none;
+
+}
+
+.form-btn:hover,.action-btn:hover {
+    background-color: #0056b3;
+}
+
+/* Style the form group to display labels and inputs on the same line */
+.form-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    width: 500px;
+}
+
+.form-group label {
+    flex: 1; /* Labels take up 1/3 of the available space */
+}
+
+.form-group input {
+    flex: 3; /* Inputs take up 2/3 of the available space */
+    margin-left: 10px; /* Add some spacing between label and input */
+}
+
+.content {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 auto;
+    padding: 30px;
+}
+
+.form-container {
+    width: 45%;
+}
+
+.action-btn{
+    background-color: #f44336;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 13px;
+    cursor: pointer;
+    text-decoration: none;
+}

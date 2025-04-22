@@ -1,14 +1,16 @@
 from datetime import datetime, timedelta, time
+import json
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from account.models import Account, UserGameCounter
+from account.models import Account, Profile, UserGameCounter
 from agent.models import Agent
 from cashier.models import Cashier
 from game.models import CashierGame, UserGame
 from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 
 @csrf_exempt
 def login_view(request):
@@ -172,12 +174,42 @@ def setting_view(request):
     user = request.user
     today_game_counter = UserGameCounter.objects.get(user=user)
     acc = Account.objects.get(user=user)
-    return render(request,'account/setting.html',{"acc":acc,"cout":today_game_counter})
+    
+    # Unpack tuple correctly
+    profile, created = Profile.objects.get_or_create(user=user)
+
+    # Ensure patterns exist and are converted correctly
+    saved_patterns = profile.patterns if profile.patterns else []
+    
+    PATTERN_MAP = {
+        "1": "Lines",
+        "2": "Diagonal",
+        "3": "Outside Box",
+        "4": "Inside Box"
+    }
+    pattern_names = [PATTERN_MAP.get(str(pattern), "Unknown Pattern") for pattern in saved_patterns]
+
+    return render(request, 'account/setting.html', {
+        "acc": acc,
+        "cout": today_game_counter,
+        "profile": profile,
+        "pattern_names": pattern_names
+    })
 
 
 @login_required
-def setting_view(request):
-    user = request.user
-    today_game_counter = UserGameCounter.objects.get(user=user)
-    acc = Account.objects.get(user=user)
-    return render(request,'account/setting.html',{"acc":acc,"cout":today_game_counter})
+def save_game_settings(request):
+    user = request.user  # Get the authenticated user
+    data = json.loads(request.body)  # Parse JSON data
+    patterns = data.get("patterns", [])
+    display_info = data.get("display_info", True)
+
+    # Ensure profile exists
+    profile, created = Profile.objects.get_or_create(user=user)
+
+    # Update profile data
+    profile.patterns = patterns
+    profile.display_info = display_info
+    profile.save()
+
+    return JsonResponse({"success": True, "message": "Settings saved successfully!"})

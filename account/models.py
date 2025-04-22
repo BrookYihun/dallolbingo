@@ -40,3 +40,11 @@ class UserGameCounter(models.Model):
         else:
             self.game_counter += 1
         self.save()
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    patterns = models.JSONField(default=list)  # Stores selected patterns as a list
+    display_info = models.BooleanField(default=True)  # Stores display toggle state
+
+    def __str__(self):
+        return f"{self.user.username} Profile"

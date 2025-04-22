@@ -14,7 +14,7 @@
     </div>
     <form id="game-form" action="{% url 'new_game' %}">{% csrf_token %}
     <div class="input-section">
-
+      <div id="shop" style="display: none;">{{shop}}</div>
       <div class="input-group">
         <label for="stake">{{ cashier }}'s Balance: </label>
         <input type="number" id="acc" readonly>

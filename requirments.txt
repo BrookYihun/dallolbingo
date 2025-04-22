@@ -1,2 +1,8 @@
-Django==4.2.3
+Django==4.2.20
 psycopg2-binary
+channels==4.2.2
+daphne
+whitenoise
+pillow
+django-cors-headers
+setuptools   

@@ -18,9 +18,9 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('',include('game.urls')),
-    path('account/',include('account.urls')),
-    path('agent/',include('agent.urls')),
-    path('cashier/',include('cashier.urls'))
+    path('backup/admin/', admin.site.urls),
+    path('backup/',include('game.urls')),
+    path('backup/account/',include('account.urls')),
+    path('backup/agent/',include('agent.urls')),
+    path('backup/cashier/',include('cashier.urls'))
 ]

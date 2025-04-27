@@ -232,7 +232,7 @@ function connectWebSocket(shop, gameId) {
         socket.close(); // Close existing connection before creating new one
     }
 
-    socket = new WebSocket(`wss://${window.location.host}/ws/game/${shop}/${gameId}/`);
+    socket = new WebSocket(`wss://${window.location.host}/backup/ws/game/${shop}/${gameId}/`);
 
     socket.onopen = function () {
         console.log(`Connected to WebSocket for game ${gameId}`);

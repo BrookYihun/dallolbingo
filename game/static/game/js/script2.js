@@ -10,6 +10,10 @@ const bonus = document.getElementById('bonus');
 const free = document.getElementById('free');
 const cashier = document.getElementById('cashier').innerText;
 var patterns = [];
+var selectedLanguage = "mm";
+let speech = new SpeechSynthesisUtterance();
+let voices = [];
+
 
 function setCookie(name, value, days) {
     var expires = "";
@@ -135,45 +139,81 @@ document.querySelectorAll('.option').forEach(option => {
 
 // Inside the form submission event listener
 const game_id = document.getElementById('game').innerText;
-gameForm.addEventListener('submit', (e) => {
+const submitBtn = document.getElementById('start-button');
+
+gameForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (selectedNumbers.length === 0) {
+    if (selectedNumbers.length === 0) return;
+
+    if (submitBtn.innerText.trim() === "Confirm") {
+        // Play sound
+        // if (selectedLanguage=='am'){
+        //     filePath = "/static/game/audio/start.mp3";
+        //     var audio = new Audio(filePath);
+        //     audio.play();
+        // }else 
+        if (selectedLanguage=='mm'){
+            filePath = "/static/game/audio/male/check.mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else{
+            speech.voice = voices[0];
+            speech.text="Confirm your Card Selection";
+            window.speechSynthesis.speak(speech);
+        }
+
+        // Disable button to prevent re-click
+        submitBtn.disabled = true;
+
+        // Wait 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        // Enable and change text to "Start Game"
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Start Game";
         return;
     }
 
-    // Create a hidden input element for each selected number
-    selectedNumbers.forEach(number => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'players';
-        input.value = number;
-        gameForm.appendChild(input);
-    });
+    // Continue if "Start Game"
+    if (cashier === "True") {
+        socket.send(JSON.stringify({
+            type: 'start_game',
+            stake: document.getElementById("stake").value,
+            bonus: bonus.checked,
+            free: free.checked,
+        }));
+        console.log('Submitted via WebSocket as cashier');
+    } else {
+        // Handle cookies
+        deleteCookie("Stake");
+        setCookie("Stake", document.getElementById("stake").value, 7);
 
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'game';
-    input.value = game_id;
-    gameForm.appendChild(input);
-    deleteCookie("Stake");
-    var v = document.getElementById("stake").value;
-    setCookie("Stake",v,7);
+        deleteCookie("Bonus");
+        setCookie("Bonus", bonus.checked, 7);
 
-    deleteCookie("Bonus");
-    var b = bonus.checked;
-    setCookie("Bonus",b,7);
+        deleteCookie("Free");
+        setCookie("Free", free.checked, 7);
 
-    deleteCookie("Free");
-    var f = free.checked;
-    setCookie("Free",f,7);
-    
-    deleteCookie("Patterns");
-    setCookie('Patterns', patterns, 7);
+        // Add hidden inputs
+        selectedNumbers.forEach(number => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'players';
+            input.value = number;
+            gameForm.appendChild(input);
+        });
 
-    // Submit the form to the 'bingo' URL
-    gameForm.method = 'POST';
-    gameForm.submit();
+        const gameInput = document.createElement('input');
+        gameInput.type = 'hidden';
+        gameInput.name = 'game';
+        gameInput.value = game_id;
+        gameForm.appendChild(gameInput);
+
+        // Submit form traditionally
+        gameForm.method = 'POST';
+        gameForm.submit();
+    }
 });
 
 function updateTotalSelected() {
@@ -280,6 +320,17 @@ window.onload = function() {
     var f = getCookie("Free");
     if (f!=null){
         free.checked = f;
+    }
+
+    var cookieLanguage = getCookie("selectedLanguage");
+    if (cookieLanguage!=null){
+        if (cookieLanguage == "am"){
+        selectedLanguage = "am";
+        }else if (cookieLanguage == "mm"){
+        selectedLanguage = "mm";
+        }else{
+        selectedLanguage = 0;
+        }
     }
     
     const selectedPatterns = getCookie("Patterns");

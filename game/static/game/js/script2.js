@@ -11,6 +11,9 @@ const free = document.getElementById('free');
 const cashier = document.getElementById('cashier').innerText;
 var patterns = [];
 let socket = null;
+var selectedLanguage = "mm";
+let speech = new SpeechSynthesisUtterance();
+let voices = [];
 
 function setCookie(name, value, days) {
     var expires = "";
@@ -136,15 +139,44 @@ function remove(){
 
 // Inside the form submission event listener
 const game_id = document.getElementById('game').innerText;
-gameForm.addEventListener('submit', (e) => {
+const submitBtn = document.getElementById('start-button');
+
+gameForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (selectedNumbers.length === 0) {
+    if (selectedNumbers.length === 0) return;
+
+    if (submitBtn.innerText.trim() === "Confirm") {
+        // Play sound
+        // if (selectedLanguage=='am'){
+        //     filePath = "/static/game/audio/start.mp3";
+        //     var audio = new Audio(filePath);
+        //     audio.play();
+        // }else 
+        if (selectedLanguage=='mm'){
+            filePath = "/static/game/audio/male/check.mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else{
+            speech.voice = voices[0];
+            speech.text="Confirm your Card Selection";
+            window.speechSynthesis.speak(speech);
+        }
+
+        // Disable button to prevent re-click
+        submitBtn.disabled = true;
+
+        // Wait 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        // Enable and change text to "Start Game"
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Start Game";
         return;
     }
 
-    if (cashier=="True") {
-        // Send data via WebSocket if user is a cashier
+    // Continue if "Start Game"
+    if (cashier === "True") {
         socket.send(JSON.stringify({
             type: 'start_game',
             stake: document.getElementById("stake").value,
@@ -153,20 +185,17 @@ gameForm.addEventListener('submit', (e) => {
         }));
         console.log('Submitted via WebSocket as cashier');
     } else {
-        // Handle cookies for non-cashiers
+        // Handle cookies
         deleteCookie("Stake");
-        const v = document.getElementById("stake").value;
-        setCookie("Stake", v, 7);
+        setCookie("Stake", document.getElementById("stake").value, 7);
 
         deleteCookie("Bonus");
-        const b = bonus.checked;
-        setCookie("Bonus", b, 7);
+        setCookie("Bonus", bonus.checked, 7);
 
         deleteCookie("Free");
-        const f = free.checked;
-        setCookie("Free", f, 7);
+        setCookie("Free", free.checked, 7);
 
-        // Append hidden inputs for selected numbers
+        // Add hidden inputs
         selectedNumbers.forEach(number => {
             const input = document.createElement('input');
             input.type = 'hidden';
@@ -270,6 +299,17 @@ window.onload = function() {
     var f = getCookie("Free");
     if (f!=null){
         free.checked = f;
+    }
+
+    var cookieLanguage = getCookie("selectedLanguage");
+    if (cookieLanguage!=null){
+        if (cookieLanguage == "am"){
+        selectedLanguage = "am";
+        }else if (cookieLanguage == "mm"){
+        selectedLanguage = "mm";
+        }else{
+        selectedLanguage = 0;
+        }
     }
     
     // const selectedPatterns = getCookie("Patterns");

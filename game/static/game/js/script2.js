@@ -153,6 +153,7 @@ gameForm.addEventListener('submit', async (e) => {
         //     var audio = new Audio(filePath);
         //     audio.play();
         // }else 
+        
         if (selectedLanguage=='mm'){
             filePath = "/static/game/audio/male/check.mp3";
             var audio = new Audio(filePath);

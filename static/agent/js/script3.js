@@ -74,6 +74,24 @@ function filterTable() {
     updateTable(); // Update the table with pagination
 }
 
+function filterTable() {
+    const searchValue = document.getElementById("searchBox").value.toLowerCase();
+    const tableBody = document.querySelector("#gameTable tbody");
+    const rows = tableBody.querySelectorAll("tr");
+
+    rows.forEach(row => {
+        const nameCell = row.querySelector("td:first-child"); // Name is in the first column
+        if (nameCell) {
+            const nameText = nameCell.textContent.toLowerCase();
+            if (nameText.includes(searchValue)) {
+                row.style.display = ""; // Show row if it matches
+            } else {
+                row.style.display = "none"; // Hide row if no match
+            }
+        }
+    });
+}
+
 var loader = document.getElementById('loader');
 var main = document.getElementById('main');
 

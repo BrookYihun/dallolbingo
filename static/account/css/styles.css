@@ -6,25 +6,33 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background-color: #f2f2f2;
+    background-color: rgba(3, 192, 255,0.5);
   }
   
   .login-container {
-    width: 320px;
+    display: flex;
+    flex-direction: row;
+    width: auto;
+    height: 420px;
     background-color: #fff;
-    padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 10px rgba(0, 0, 0, 0.5);
   }
   
   .login-form {
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 400px;
+    height: 400px;
   }
   
   .login-form h2 {
     margin-bottom: 20px;
     text-align: center;
+    font-size: 30px;
+    color: #a45b28;
   }
   
   .input-group {
@@ -37,7 +45,7 @@ body {
   }
   
   .input-group input {
-    width: 100%;
+    width: 300px;
     padding: 10px;
     font-size: 16px;
     border: 1px solid #ccc;
@@ -53,6 +61,7 @@ body {
     font-size: 16px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+    width: 300px;
   }
   
   button:hover {
@@ -64,4 +73,10 @@ body {
     font-size: 14px;
     margin-top: 5px;
 }
-  
+
+.img-logo {
+  width: 420px;
+  height: 420px;
+  border-radius: 8px;
+  box-shadow: -10px 0 15px -5px rgba(0, 0, 0, 0.5);
+}

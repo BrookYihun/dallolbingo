@@ -9,6 +9,7 @@ const clearbtn = document.getElementById('clear');
 const bonus = document.getElementById('bonus');
 const free = document.getElementById('free');
 const cashier = document.getElementById('cashier').innerText;
+var patterns = [];
 
 function setCookie(name, value, days) {
     var expires = "";
@@ -44,12 +45,16 @@ clearbtn.addEventListener('click',()=>{
     deleteCookie("selectedPlayers");
     var divs = container.querySelectorAll(".box");
     var boundary = 100;
+    var buttonText = moreNumber.textContent;
     if(buttonText=="1-100"){
         boundary = 200;
     }
     for (var i = 0; i <boundary; i++) {
         if (selectedNumbers.includes(i+1)){
             divs[i].classList.remove('selected');
+            if(cashier=="True"){
+                remove_player(i+1);
+            }
         }
     }
     selectedNumbers=[];
@@ -101,6 +106,28 @@ function remove(){
     }
 }
 
+// Handle custom select dropdown
+document.querySelector('.select-box').addEventListener('click', function () {
+    const selectBox = this.parentElement;
+    selectBox.classList.toggle('open'); // Toggle open class to show/hide options
+});
+
+// Handle selecting an option
+document.querySelectorAll('.option').forEach(option => {
+    option.addEventListener('click', function () {
+        // Toggle 'selected' class on the clicked option
+        this.classList.toggle('selected');
+
+        // Update the displayed selected patterns
+        const selectedPatterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.textContent).join(', ');
+        document.getElementById('selectedPatterns').textContent = selectedPatterns || 'Choose Patterns';
+        
+        // Optionally save the selected values to cookies or send to server
+        patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
+        
+    });
+});
+
 // Create number boxes
 
 
@@ -140,6 +167,9 @@ gameForm.addEventListener('submit', (e) => {
     deleteCookie("Free");
     var f = free.checked;
     setCookie("Free",f,7);
+    
+    deleteCookie("Patterns");
+    setCookie('Patterns', patterns, 7);
 
     // Submit the form to the 'bingo' URL
     gameForm.method = 'POST';
@@ -149,6 +179,7 @@ gameForm.addEventListener('submit', (e) => {
 function updateTotalSelected() {
     deleteCookie("selectedPlayers");
     setCookie("selectedPlayers",selectedNumbers,7);
+    document.getElementById('noplayer').value = selectedNumbers.length;
     //document.getElementById('win').value = selectedNumbers.length * document.getElementById('stake').value;
 }
 
@@ -163,11 +194,9 @@ function get_game_stat(){
             if (response.message === 'None') {
                 
             } else {
-                other_selectedStr = Array.isArray(response.selected_players) ? response.selected_players : [];
-                other_selected = other_selectedStr.map(str => parseInt(str, 10));
                 selectedNumbersStr = Array.isArray(response.main_selected) ? response.main_selected : [];
                 selectedNumbers = selectedNumbersStr.map(str => parseInt(str, 10));
-                update_view();
+                update_view(response.selected_players);
             }
         },
         error: function(xhr, status, error) {
@@ -176,8 +205,9 @@ function get_game_stat(){
       });
 }
 
-function update_view(){
+function update_view(players){
     var boxes = document.querySelectorAll('.box');
+    other_selected = [];
 
     boxes.forEach(function(box) {
         var innerTextStr = box.innerText.trim(); // Get inner text and trim whitespace
@@ -186,18 +216,28 @@ function update_view(){
         if (selectedNumbers.includes(innerText)) {
             // Do something with the matching box element, e.g., add a class
             box.classList.add('selected');
-        }else if (other_selected.includes(innerText)) {
-            // Do something with the matching box element, e.g., add a class
-            box.classList.add('selected');
-            box.classList.add('blured');
+        }else {
+            box.className = "box";
         }
-        else {
-            box.classList.remove('selected');
-            box.classList.remove('blured');
+
+    });
+    var colornum = 1;
+    players.forEach(function(cashier){
+        var arrayStr = Array.isArray(cashier.selected_players) ? cashier.selected_players : [];
+        var array = arrayStr.map(str => parseInt(str, 10));
+        other_selected.push(...array);
+        var color = "color"+colornum;
+        colornum++;
+        for (let element of array) {
+            boxes[element-1].classList.add('selected');
+            boxes[element-1].classList.add(color);
+            boxes[element-1].classList.add('blured');
         }
+
     });
 
-    document.getElementById('num').innerHTML = selectedNumbers.length;
+    startButton.disabled = selectedNumbers.length === 0 && other_selected.length === 0;
+
 }
 
 window.onload = function() {
@@ -241,6 +281,28 @@ window.onload = function() {
     if (f!=null){
         free.checked = f;
     }
+    
+    const selectedPatterns = getCookie("Patterns");
+    if (selectedPatterns) {
+        const selectedValues = getCookie('Patterns') || '[]';
+    
+        // Loop through all options and mark those that are selected
+        document.querySelectorAll('.option').forEach(option => {
+            if (selectedValues.includes(option.dataset.value)) {
+                option.classList.add('selected'); // Add 'selected' class to pre-selected options
+            }
+        });
+    
+        // Update the displayed selected patterns
+        const selected = selectedValues.map(value => {
+            return document.querySelector(`.option[data-value="${value}"]`).textContent;
+        }).join(', ');
+        
+        document.getElementById('selectedPatterns').textContent = selected || 'Choose Patterns';
+        
+         patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
+    }
+
     if(cashier!="True"){
         var selectedPlayersStr = getCookie("selectedPlayers");
         if (selectedPlayersStr!=null){

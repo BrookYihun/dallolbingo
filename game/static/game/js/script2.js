@@ -196,6 +196,9 @@ gameForm.addEventListener('submit', async (e) => {
         deleteCookie("Free");
         setCookie("Free", free.checked, 7);
 
+        deleteCookie("Patterns");
+        setCookie('Patterns', patterns, 7);
+
         // Add hidden inputs
         selectedNumbers.forEach(number => {
             const input = document.createElement('input');

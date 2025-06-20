@@ -29,6 +29,7 @@ var hiddenData = document.querySelector("#hiddenData tbody").innerHTML;
 const rowsPerPage = 20;
 let currentPage = 0;
 let dataRows;
+let allRows = [];
 
 function updateTable() {
 
@@ -52,6 +53,26 @@ function updateTable() {
         }
     });
 
+}
+
+function filterTable() {
+    const searchValue = document.getElementById("searchBox").value.toLowerCase();
+
+    // Filter the full data based on the search value
+    const filteredRows = allRows.filter(shopStat => {
+        return shopStat.name.toLowerCase().includes(searchValue); // Filter by name
+    });
+
+    // Update the table with filtered rows
+    const tableBody = document.querySelector("#hiddenData tbody");
+    tableBody.innerHTML = ""; // Clear existing rows
+
+    filteredRows.forEach(shopStat => {
+        const html = generateShopStatHTML(shopStat);
+        tableBody.insertAdjacentHTML('beforeend', html);
+    });
+
+    updateTable(); // Update the table with pagination
 }
 
 var loader = document.getElementById('loader');
@@ -164,11 +185,13 @@ function renderShopsStats(data) {
     const tableBody = document.querySelector("#hiddenData tbody");
     tableBody.innerHTML = ""; // Clear existing rows
 
+    allRows = []; // Reset allRows to avoid duplicates
 
     // Generate HTML for each user statistic and append it to the table
     data.agents_stat.forEach(function(shopStat) {
         const html = generateShopStatHTML(shopStat);
         tableBody.insertAdjacentHTML('beforeend', html);
+        allRows.push(shopStat);
     });
 
 }

@@ -369,6 +369,11 @@ def has_bingo(card, called_numbers,patterns):
     if not patterns:
         patterns = ["1","2","3"]
     
+    if isinstance(patterns, int):
+        patterns = [str(patterns)]
+    if isinstance(patterns, str):
+        patterns = [patterns]
+    
     winning_numbers = []
     
     if "2" in patterns:

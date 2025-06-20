@@ -162,7 +162,7 @@ def new_game_view(request):
             context = {'bingo_cards': bingo_cards, 'game': game,'game_counter':user_game_counter, 'players': players,'bingoRows': bingo_rows}
             return render(request,'game/index.html',context)
         except ValueError:
-            return HttpResponse('Error')
+            return HttpResponse(ValueError)
     acc = Account.objects.get(user= request.user)
     game = Game.objects.create()
     today_game_counter = UserGameCounter.objects.get(user=request.user)

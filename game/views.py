@@ -51,6 +51,9 @@ def new_game_view(request):
             bonus = request.POST.get('bonus') == 'on'
             free = request.POST.get('free') == 'on'
             stake = request.POST.get('stake')
+            stake = request.POST.get('stake')
+            if not stake or not stake.isdigit():
+                stake = 20  # Default stake if not provided or invalid
             game_id = int(request.POST.get('game'))
             game = Game.objects.get(id=game_id)
             game.stake = int(stake)

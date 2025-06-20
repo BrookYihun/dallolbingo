@@ -418,8 +418,19 @@ check_btn.onclick = function () {
 
 function checkBingo(num) {
     // Make an AJAX request to your Django view to fetch the updated list of selected numbers
-    const patterns = JSON.parse(decodeURIComponent(getCookie("Patterns")));
-    console.log(patterns);
+    let patterns = [];
+
+try {
+  const cookieValue = getCookie("Patterns");
+  if (cookieValue) {
+    patterns = JSON.parse(decodeURIComponent(cookieValue));
+  }
+} catch (error) {
+  console.error("Error parsing patterns cookie:", error);
+  patterns = [];
+}
+
+console.log(patterns);
     $.ajax({
       url:  "/check/",  // Replace with your Django view URL
       type: "GET",

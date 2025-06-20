@@ -501,10 +501,13 @@ function checkBingo(num) {
   
         var p = document.createElement("p");
         p.className = "bingo";
+        var audiotxt = "yesbingo";
         if(cardResult.remaining_numbers){
             p.textContent = cardResult.card_name + " - Bad " + cardResult.message;
+            audiotxt = "passbingo";
         }else{
             p.textContent = cardResult.card_name + " - Good " + cardResult.message;
+            audiotxt = "yesbingo";
         }
         
         tableContainer.appendChild(p);
@@ -571,6 +574,24 @@ function checkBingo(num) {
 
         }
 
+        if (selectedLanguage=='am'){
+            filePath = "/static/game/audio/male/"+audiotxt+".mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else if (selectedLanguage=='mm'){
+            filePath = "/static/game/audio/male/"+audiotxt+".mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else{
+            speech.voice = voices[0];
+            if(audiotxt == "yesbingo"){
+                speech.text="We have a Winner";
+            }else{
+                speech.text="No Winner";
+            }
+            window.speechSynthesis.speak(speech);
+        }
+
         // Appending buttons to the tableContainer
   
     } else {
@@ -634,6 +655,20 @@ function checkBingo(num) {
         // Appending buttons to the tableContainer
         tableContainer.appendChild(closeButton);
         tableContainer.appendChild(blockButton);
+
+        if (selectedLanguage=='am'){
+            filePath = "/static/game/audio/male/nobingo.mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else if (selectedLanguage=='mm'){
+            filePath = "/static/game/audio/male/nobingo.mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else{
+            speech.voice = voices[0];
+            speech.text="No Bingo";
+            window.speechSynthesis.speak(speech);
+        }
       
   
     }

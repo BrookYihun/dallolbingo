@@ -161,8 +161,11 @@ def new_game_view(request):
                 bingo_rows.append({'letter': letter, 'numbers': row_numbers})
             context = {'bingo_cards': bingo_cards, 'game': game,'game_counter':user_game_counter, 'players': players,'bingoRows': bingo_rows}
             return render(request,'game/index.html',context)
-        except ValueError:
-            return HttpResponse(ValueError)
+        except Exception as e:
+            import traceback
+            traceback_str = traceback.format_exc()
+            print("Error in new_game_view:", traceback_str)  # Or use logging
+            return HttpResponse(f"Internal Server Error:\n{traceback_str}", status=500)
     acc = Account.objects.get(user= request.user)
     game = Game.objects.create()
     today_game_counter = UserGameCounter.objects.get(user=request.user)

@@ -14,36 +14,28 @@ var selectedLanguage = "mm";
 let speech = new SpeechSynthesisUtterance();
 let voices = [];
 
+function setCookie(cookieName, cookieValue, expirationDays) {
+    const d = new Date();
+    d.setTime(d.getTime() + (expirationDays * 24 * 60 * 60 * 1000));
+    const expires = `expires=${d.toUTCString()}`;
+    document.cookie = `${cookieName}=${cookieValue}; ${expires}; path=/`;
+}
 
-function setCookie(name, value, days) {
-    var expires = "";
-    if (days) {
-        var date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        expires = "; expires=" + date.toUTCString();
-    }
-    document.cookie = name + "=" + encodeURIComponent(JSON.stringify(value)) + expires + "; path=/";
-  }
-
-  function getCookie(name) {
-    var nameEQ = name + "=";
-    var cookies = document.cookie.split(';');
-    for (var i = 0; i < cookies.length; i++) {
-        var cookie = cookies[i];
-        while (cookie.charAt(0) == ' ') {
-            cookie = cookie.substring(1, cookie.length);
-        }
-        if (cookie.indexOf(nameEQ) == 0) {
-            var cookieValue = cookie.substring(nameEQ.length, cookie.length);
-            return JSON.parse(decodeURIComponent(cookieValue));
+function getCookie(cookieName) {
+    const name = `${cookieName}=`;
+    const cookies = document.cookie.split(';');
+    for(let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.indexOf(name) === 0) {
+            return cookie.substring(name.length, cookie.length);
         }
     }
     return null;
-  }
+}
 
-  function deleteCookie(cookieName) {
-      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-  }
+function deleteCookie(cookieName) {
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+}
 
 clearbtn.addEventListener('click',()=>{
     deleteCookie("selectedPlayers");

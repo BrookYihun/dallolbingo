@@ -10,36 +10,32 @@ const bonus = document.getElementById('bonus');
 const free = document.getElementById('free');
 const cashier = document.getElementById('cashier').innerText;
 var patterns = [];
+var selectedLanguage = "mm";
+let speech = new SpeechSynthesisUtterance();
+let voices = [];
 
-function setCookie(name, value, days) {
-    var expires = "";
-    if (days) {
-        var date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        expires = "; expires=" + date.toUTCString();
-    }
-    document.cookie = name + "=" + encodeURIComponent(JSON.stringify(value)) + expires + "; path=/";
-  }
+function setCookie(cookieName, cookieValue, expirationDays) {
+    const d = new Date();
+    d.setTime(d.getTime() + (expirationDays * 24 * 60 * 60 * 1000));
+    const expires = `expires=${d.toUTCString()}`;
+    document.cookie = `${cookieName}=${cookieValue}; ${expires}; path=/`;
+}
 
-  function getCookie(name) {
-    var nameEQ = name + "=";
-    var cookies = document.cookie.split(';');
-    for (var i = 0; i < cookies.length; i++) {
-        var cookie = cookies[i];
-        while (cookie.charAt(0) == ' ') {
-            cookie = cookie.substring(1, cookie.length);
-        }
-        if (cookie.indexOf(nameEQ) == 0) {
-            var cookieValue = cookie.substring(nameEQ.length, cookie.length);
-            return JSON.parse(decodeURIComponent(cookieValue));
+function getCookie(cookieName) {
+    const name = `${cookieName}=`;
+    const cookies = document.cookie.split(';');
+    for(let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.indexOf(name) === 0) {
+            return cookie.substring(name.length, cookie.length);
         }
     }
     return null;
-  }
+}
 
-  function deleteCookie(cookieName) {
-      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-  }
+function deleteCookie(cookieName) {
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+}
 
 clearbtn.addEventListener('click',()=>{
     deleteCookie("selectedPlayers");
@@ -69,7 +65,7 @@ moreNumber.addEventListener('click',()=>{
         moreNumber.textContent = "100-200";
         remove();
     }
-    
+
 });
 
 function add(){
@@ -121,10 +117,10 @@ document.querySelectorAll('.option').forEach(option => {
         // Update the displayed selected patterns
         const selectedPatterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.textContent).join(', ');
         document.getElementById('selectedPatterns').textContent = selectedPatterns || 'Choose Patterns';
-        
+
         // Optionally save the selected values to cookies or send to server
         patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
-        
+
     });
 });
 
@@ -135,45 +131,85 @@ document.querySelectorAll('.option').forEach(option => {
 
 // Inside the form submission event listener
 const game_id = document.getElementById('game').innerText;
-gameForm.addEventListener('submit', (e) => {
+const submitBtn = document.getElementById('start-button');
+
+gameForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (selectedNumbers.length === 0) {
+    if (selectedNumbers.length === 0) return;
+
+    if (submitBtn.innerText.trim() === "Confirm") {
+        // Play sound
+        // if (selectedLanguage=='am'){
+        //     filePath = "/static/game/audio/start.mp3";
+        //     var audio = new Audio(filePath);
+        //     audio.play();
+        // }else
+
+        if (selectedLanguage=='mm'){
+            filePath = "/static/game/audio/male/check.mp3";
+            var audio = new Audio(filePath);
+            audio.play();
+        }else{
+            speech.voice = voices[0];
+            speech.text="Confirm your Card Selection";
+            window.speechSynthesis.speak(speech);
+        }
+
+        // Disable button to prevent re-click
+        submitBtn.disabled = true;
+
+        // Wait 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        // Enable and change text to "Start Game"
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Start Game";
         return;
     }
 
-    // Create a hidden input element for each selected number
-    selectedNumbers.forEach(number => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'players';
-        input.value = number;
-        gameForm.appendChild(input);
-    });
+    // Continue if "Start Game"
+    if (cashier === "True") {
+        socket.send(JSON.stringify({
+            type: 'start_game',
+            stake: document.getElementById("stake").value,
+            bonus: bonus.checked,
+            free: free.checked,
+        }));
+        console.log('Submitted via WebSocket as cashier');
+    } else {
+        // Handle cookies
+        deleteCookie("Stake");
+        setCookie("Stake", document.getElementById("stake").value, 7);
 
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'game';
-    input.value = game_id;
-    gameForm.appendChild(input);
-    deleteCookie("Stake");
-    var v = document.getElementById("stake").value;
-    setCookie("Stake",v,7);
+        deleteCookie("Bonus");
+        setCookie("Bonus", bonus.checked, 7);
 
-    deleteCookie("Bonus");
-    var b = bonus.checked;
-    setCookie("Bonus",b,7);
+        deleteCookie("Free");
+        setCookie("Free", free.checked, 7);
 
-    deleteCookie("Free");
-    var f = free.checked;
-    setCookie("Free",f,7);
-    
-    deleteCookie("Patterns");
-    setCookie('Patterns', patterns, 7);
+        deleteCookie("Patterns");
+        setCookie('Patterns', patterns, 7);
 
-    // Submit the form to the 'bingo' URL
-    gameForm.method = 'POST';
-    gameForm.submit();
+        // Add hidden inputs
+        selectedNumbers.forEach(number => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'players';
+            input.value = number;
+            gameForm.appendChild(input);
+        });
+
+        const gameInput = document.createElement('input');
+        gameInput.type = 'hidden';
+        gameInput.name = 'game';
+        gameInput.value = game_id;
+        gameForm.appendChild(gameInput);
+
+        // Submit form traditionally
+        gameForm.method = 'POST';
+        gameForm.submit();
+    }
 });
 
 function updateTotalSelected() {
@@ -192,7 +228,7 @@ function get_game_stat(){
         },
         success: function(response) {
             if (response.message === 'None') {
-                
+
             } else {
                 selectedNumbersStr = Array.isArray(response.main_selected) ? response.main_selected : [];
                 selectedNumbers = selectedNumbersStr.map(str => parseInt(str, 10));
@@ -245,7 +281,7 @@ window.onload = function() {
         const box = document.createElement('div');
         box.textContent = i;
         box.classList.add('box');
-    
+
         box.addEventListener('click', () => {
             if (selectedNumbers.includes(i)) {
                 selectedNumbers = selectedNumbers.filter(num => num !== i);
@@ -263,7 +299,7 @@ window.onload = function() {
             startButton.disabled = selectedNumbers.length === 0;
             updateTotalSelected();
         });
-    
+
         container.appendChild(box);
     }
 
@@ -281,25 +317,36 @@ window.onload = function() {
     if (f!=null){
         free.checked = f;
     }
-    
+
+    var cookieLanguage = getCookie("selectedLanguage");
+    if (cookieLanguage!=null){
+        if (cookieLanguage == "am"){
+        selectedLanguage = "am";
+        }else if (cookieLanguage == "mm"){
+        selectedLanguage = "mm";
+        }else{
+        selectedLanguage = 0;
+        }
+    }
+
     const selectedPatterns = getCookie("Patterns");
     if (selectedPatterns) {
         const selectedValues = getCookie('Patterns') || '[]';
-    
+
         // Loop through all options and mark those that are selected
         document.querySelectorAll('.option').forEach(option => {
             if (selectedValues.includes(option.dataset.value)) {
                 option.classList.add('selected'); // Add 'selected' class to pre-selected options
             }
         });
-    
+
         // Update the displayed selected patterns
         const selected = selectedValues.map(value => {
             return document.querySelector(`.option[data-value="${value}"]`).textContent;
         }).join(', ');
-        
+
         document.getElementById('selectedPatterns').textContent = selected || 'Choose Patterns';
-        
+
          patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
     }
 
@@ -320,7 +367,7 @@ window.onload = function() {
                     const box = document.createElement('div');
                     box.textContent = i;
                     box.classList.add('box');
-              
+
                     box.addEventListener('click', () => {
                         if (selectedNumbers.includes(i)) {
                             selectedNumbers = selectedNumbers.filter(num => num !== i);
@@ -338,7 +385,7 @@ window.onload = function() {
                         startButton.disabled = selectedNumbers.length === 0;
                         updateTotalSelected();
                     });
-              
+
                     container.appendChild(box);
                 }
             }
@@ -363,7 +410,7 @@ window.onload = function() {
             // Call your function here
             handleInputChange(currentValue);
         });
-    
+
         setInterval(get_game_stat, 1000);
     }
 
@@ -395,7 +442,7 @@ function handleInputChange(value) {
 }
 
 
-  
+
 function remove_player(card){
     var game = document.getElementById('game').innerHTML;
     $.ajax({

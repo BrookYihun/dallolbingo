@@ -311,14 +311,14 @@ window.onload = function() {
     var b = getCookie("Bonus");
     console.log(b);
     if (b!=null){
-        bonus.checked = b;
+        bonus.checked = (b === "true");;
         console.log(bonus.checked);
     }
 
     var f = getCookie("Free");
     console.log(f);
     if (f!=null){
-        free.checked = f;
+        free.checked = (f === "true");;
         console.log(free.checked);
     }
 

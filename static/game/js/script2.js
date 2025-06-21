@@ -214,7 +214,7 @@ gameForm.addEventListener('submit', async (e) => {
 
 function updateTotalSelected() {
     deleteCookie("selectedPlayers");
-    setCookie("selectedPlayers",selectedNumbers,7);
+    setCookie("selectedPlayers",encodeURIComponent(JSON.stringify(selectedNumbers)),7);
     document.getElementById('noplayer').value = selectedNumbers.length;
     //document.getElementById('win').value = selectedNumbers.length * document.getElementById('stake').value;
 }
@@ -309,13 +309,17 @@ window.onload = function() {
     }
 
     var b = getCookie("Bonus");
+    console.log(b);
     if (b!=null){
         bonus.checked = b;
+        console.log(bonus.checked);
     }
 
     var f = getCookie("Free");
+    console.log(f);
     if (f!=null){
         free.checked = f;
+        console.log(free.checked);
     }
 
     var cookieLanguage = getCookie("selectedLanguage");
@@ -331,7 +335,7 @@ window.onload = function() {
     
     const selectedPatterns = getCookie("Patterns");
     if (selectedPatterns) {
-                let selectedValues = [];
+        let selectedValues = [];
 
         try {
             const raw = getCookie('Patterns');
@@ -362,56 +366,63 @@ window.onload = function() {
 
     if(cashier!="True"){
         var selectedPlayersStr = getCookie("selectedPlayers");
-        if (selectedPlayersStr!=null){
-            var selectedPlayers = selectedPlayersStr.map(str => parseInt(str, 10));
-            selectedNumbers = selectedPlayers;
-            const containsInRange = selectedPlayers.some(function(number) {
-                return number > 100 && number <= 200;
-            });
-            startButton.disabled = selectedPlayers.length === 0;
-            var bound = 100;
-            if(containsInRange){
-                bound = 200;
-                moreNumber.textContent = "1-100";
-                for (let i = 101; i <= 200; i++) {
-                    const box = document.createElement('div');
-                    box.textContent = i;
-                    box.classList.add('box');
-              
-                    box.addEventListener('click', () => {
-                        if (selectedNumbers.includes(i)) {
-                            selectedNumbers = selectedNumbers.filter(num => num !== i);
-                            box.classList.remove('selected');
-                            if(cashier=="True"){
-                                remove_player(i);
-                            }
-                        } else {
-                            selectedNumbers.push(i);
-                            box.classList.add('selected');
-                            if(cashier=="True"){
-                                add_player(i);
-                            }
-                        }
-                        startButton.disabled = selectedNumbers.length === 0;
-                        updateTotalSelected();
-                    });
-              
-                    container.appendChild(box);
-                }
-            }
-            var divs = container.querySelectorAll(".box");
-            for (var i = 0; i < bound; i++) {
-                if (selectedPlayers.includes(i+1)){
-                    divs[i].classList.add('selected');
+        if (selectedPlayersStr != null) {
+            try {
+                var selectedPlayers = JSON.parse(decodeURIComponent(selectedPlayersStr));
+                selectedNumbers = selectedPlayers;
 
-                    if(cashier=="True"){
-                        add_player(i+1);
+                const containsInRange = selectedPlayers.some(function(number) {
+                    return number > 100 && number <= 200;
+                });
+                startButton.disabled = selectedPlayers.length === 0;
+                var bound = 100;
+                if(containsInRange){
+                    bound = 200;
+                    moreNumber.textContent = "1-100";
+                    for (let i = 101; i <= 200; i++) {
+                        const box = document.createElement('div');
+                        box.textContent = i;
+                        box.classList.add('box');
+                
+                        box.addEventListener('click', () => {
+                            if (selectedNumbers.includes(i)) {
+                                selectedNumbers = selectedNumbers.filter(num => num !== i);
+                                box.classList.remove('selected');
+                                if(cashier=="True"){
+                                    remove_player(i);
+                                }
+                            } else {
+                                selectedNumbers.push(i);
+                                box.classList.add('selected');
+                                if(cashier=="True"){
+                                    add_player(i);
+                                }
+                            }
+                            startButton.disabled = selectedNumbers.length === 0;
+                            updateTotalSelected();
+                        });
+                
+                        container.appendChild(box);
                     }
                 }
+                var divs = container.querySelectorAll(".box");
+                for (var i = 0; i < bound; i++) {
+                    if (selectedPlayers.includes(i+1)){
+                        divs[i].classList.add('selected');
+
+                        if(cashier=="True"){
+                            add_player(i+1);
+                        }
+                    }
+                }
+
+                // Use containsInRange as needed
+            } catch (e) {
+                console.error("Failed to parse selected players from cookie:", e);
             }
         }
+            
     }
-
     const inputElement = document.getElementById('stake');
 
     if(cashier=="True"){

@@ -65,7 +65,7 @@ moreNumber.addEventListener('click',()=>{
         moreNumber.textContent = "100-200";
         remove();
     }
-    
+
 });
 
 function add(){
@@ -117,10 +117,10 @@ document.querySelectorAll('.option').forEach(option => {
         // Update the displayed selected patterns
         const selectedPatterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.textContent).join(', ');
         document.getElementById('selectedPatterns').textContent = selectedPatterns || 'Choose Patterns';
-        
+
         // Optionally save the selected values to cookies or send to server
         patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
-        
+
     });
 });
 
@@ -144,8 +144,8 @@ gameForm.addEventListener('submit', async (e) => {
         //     filePath = "/static/game/audio/start.mp3";
         //     var audio = new Audio(filePath);
         //     audio.play();
-        // }else 
-        
+        // }else
+
         if (selectedLanguage=='mm'){
             filePath = "/static/game/audio/male/check.mp3";
             var audio = new Audio(filePath);
@@ -228,7 +228,7 @@ function get_game_stat(){
         },
         success: function(response) {
             if (response.message === 'None') {
-                
+
             } else {
                 selectedNumbersStr = Array.isArray(response.main_selected) ? response.main_selected : [];
                 selectedNumbers = selectedNumbersStr.map(str => parseInt(str, 10));
@@ -281,7 +281,7 @@ window.onload = function() {
         const box = document.createElement('div');
         box.textContent = i;
         box.classList.add('box');
-    
+
         box.addEventListener('click', () => {
             if (selectedNumbers.includes(i)) {
                 selectedNumbers = selectedNumbers.filter(num => num !== i);
@@ -299,7 +299,7 @@ window.onload = function() {
             startButton.disabled = selectedNumbers.length === 0;
             updateTotalSelected();
         });
-    
+
         container.appendChild(box);
     }
 
@@ -328,25 +328,25 @@ window.onload = function() {
         selectedLanguage = 0;
         }
     }
-    
+
     const selectedPatterns = getCookie("Patterns");
     if (selectedPatterns) {
         const selectedValues = getCookie('Patterns') || '[]';
-    
+
         // Loop through all options and mark those that are selected
         document.querySelectorAll('.option').forEach(option => {
             if (selectedValues.includes(option.dataset.value)) {
                 option.classList.add('selected'); // Add 'selected' class to pre-selected options
             }
         });
-    
+
         // Update the displayed selected patterns
         const selected = selectedValues.map(value => {
             return document.querySelector(`.option[data-value="${value}"]`).textContent;
         }).join(', ');
-        
+
         document.getElementById('selectedPatterns').textContent = selected || 'Choose Patterns';
-        
+
          patterns = Array.from(document.querySelectorAll('.option.selected')).map(option => option.dataset.value);
     }
 
@@ -367,7 +367,7 @@ window.onload = function() {
                     const box = document.createElement('div');
                     box.textContent = i;
                     box.classList.add('box');
-              
+
                     box.addEventListener('click', () => {
                         if (selectedNumbers.includes(i)) {
                             selectedNumbers = selectedNumbers.filter(num => num !== i);
@@ -385,7 +385,7 @@ window.onload = function() {
                         startButton.disabled = selectedNumbers.length === 0;
                         updateTotalSelected();
                     });
-              
+
                     container.appendChild(box);
                 }
             }
@@ -410,7 +410,7 @@ window.onload = function() {
             // Call your function here
             handleInputChange(currentValue);
         });
-    
+
         setInterval(get_game_stat, 1000);
     }
 
@@ -442,7 +442,7 @@ function handleInputChange(value) {
 }
 
 
-  
+
 function remove_player(card){
     var game = document.getElementById('game').innerHTML;
     $.ajax({

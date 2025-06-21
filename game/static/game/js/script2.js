@@ -189,7 +189,7 @@ gameForm.addEventListener('submit', async (e) => {
         setCookie("Free", free.checked, 7);
 
         deleteCookie("Patterns");
-        setCookie('Patterns', patterns, 7);
+        setCookie("Patterns", encodeURIComponent(JSON.stringify(patterns)), 7);
 
         // Add hidden inputs
         selectedNumbers.forEach(number => {
@@ -331,7 +331,17 @@ window.onload = function() {
     
     const selectedPatterns = getCookie("Patterns");
     if (selectedPatterns) {
-        const selectedValues = getCookie('Patterns') || '[]';
+                let selectedValues = [];
+
+        try {
+            const raw = getCookie('Patterns');
+            if (raw) {
+                selectedValues = JSON.parse(decodeURIComponent(raw));
+            }
+        } catch (err) {
+            console.error("Error parsing Patterns cookie:", err);
+            selectedValues = [];
+        }
     
         // Loop through all options and mark those that are selected
         document.querySelectorAll('.option').forEach(option => {

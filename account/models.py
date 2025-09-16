@@ -40,3 +40,13 @@ class UserGameCounter(models.Model):
         else:
             self.game_counter += 1
         self.save()
+
+
+class Deposit(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    status = models.BooleanField(default=False)  # False = pending, True = completed
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Deposit {self.id} - {self.user.username} - {self.amount} ({'Done' if self.status else 'Pending'})"

@@ -10,7 +10,7 @@ from django.db import connection, models
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 
-from account.models import Account, UserGameCounter
+from account.models import Account, UserGameCounter, Deposit
 from agent.models import Agent
 from cashier.models import Cashier
 from game.models import UserGame
@@ -828,6 +828,7 @@ def get_shop_info(request):
 @login_required
 def add_balance(request):
     agent = Agent.objects.get(user=request.user)
+
     if agent is not None:
         if request.method == 'GET':
             try:
@@ -835,30 +836,59 @@ def add_balance(request):
                 user = User.objects.get(id=int(user_id))
                 acc = Account.objects.get(user=user)
                 balance = request.GET.get('account')
-                if agent.account >= Decimal(balance) and agent.prepaid:
-                    acc.account += Decimal(balance)
-                    agent.account -= Decimal(balance)
-                    agent.save()
-                    acc.save()
-                    context={'message':'Successfully added balance to shop '}
-                elif agent.prepaid == False:
-                    acc.account += Decimal(balance)
-                    agent.account -= Decimal(balance)
-                    agent.save()
-                    acc.save()
-                    context={'message':'Successfully added balance to shop '}
+                amount = Decimal(balance)
+
+                # ✅ Special handling for "offline" agents
+                if "offline" in agent.user.username.lower():
+                    if agent.prepaid:
+                        if agent.account >= amount:
+                            # Create deposit and deduct from agent
+                            Deposit.objects.create(
+                                user=user,
+                                amount=amount,
+                                status=False
+                            )
+                            agent.account -= amount
+                            agent.save()
+                            context = {'message': 'Deposit created (pending approval).'}
+                        else:
+                            context = {'message': 'Insufficient balance!!'}
+                    else:
+                        # Non-prepaid offline agent
+                        Deposit.objects.create(
+                            user=user,
+                            amount=amount,
+                            status=False
+                        )
+                        context = {'message': 'Deposit created (pending approval).'}
+
                 else:
-                    context={'message':'Insufficient balance!!'}
+                    # Normal balance handling
+                    if agent.account >= amount and agent.prepaid:
+                        acc.account += amount
+                        agent.account -= amount
+                        agent.save()
+                        acc.save()
+                        context = {'message': 'Successfully added balance to shop'}
+                    elif not agent.prepaid:
+                        acc.account += amount
+                        agent.account -= amount
+                        agent.save()
+                        acc.save()
+                        context = {'message': 'Successfully added balance to shop'}
+                    else:
+                        context = {'message': 'Insufficient balance!!'}
 
                 return JsonResponse(context)
-            
+
             except ValueError:
-                context={'message':'Error has Happened'}
+                context = {'message': 'Error has Happened'}
                 return JsonResponse(context)
-        
+
         return redirect('agent_index')
-    
+
     return redirect('index')
+
 
 @csrf_exempt
 @login_required

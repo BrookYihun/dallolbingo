@@ -68,9 +68,12 @@ window.addEventListener('load', function() {
         }else if (cookieLanguage == "mm"){
         callerLanguageSelect.selectedIndex = 1;
         selectedLanguage = "mm";
-        }else{
+        }else if (cookieLanguage == "mm2"){
+        callerLanguageSelect.selectedIndex = 2;
+        selectedLanguage = "mm2";
+		}else{
         selectedLanguage = 0;
-        callerLanguageSelect.selectedIndex = 4;
+        callerLanguageSelect.selectedIndex = 5;
         }
     }
     var modeCookie = getCookie("mode");
@@ -142,12 +145,12 @@ function getLanguage(){
 
 callerLanguageSelect.addEventListener('change', function() {
     // Update the language for call-out-loud
-    selectedLanguage = callerLanguageSelect.value;
+    const selectedLanguage = callerLanguageSelect.value;
     deleteCookie("selectedLanguage");
-    setCookie("selectedLanguage",selectedLanguage,7);
-    // Pass the selected language to the speakNumber function
-    if(selectedNewLanguage!='am' || selectedNewLanguage!='mm'){
-      speech.voice = voices[0];
+    setCookie("selectedLanguage", selectedLanguage, 7);
+
+    if (!['am', 'mm', 'mm2'].includes(selectedLanguage)) {
+        speech.voice = voices[0];
     }
 });
 
@@ -216,6 +219,10 @@ function callNumber() {
         audio.play();
     }else if (selectedLanguage=='mm'){
         filePath = "/static/game/audio/male/"+selectedNumber+".mp3";
+        var audio = new Audio(filePath);
+        audio.play();
+    }else if (selectedLanguage=='mm2'){
+        filePath = "/static/game/audio/bingo/"+selectedNumber+".wav";
         var audio = new Audio(filePath);
         audio.play();
     }else{
@@ -298,7 +305,7 @@ startbtn.onclick = function(){
             filePath = "/static/game/audio/stop.mp3";
             var audio = new Audio(filePath);
             audio.play();
-        }else if (selectedLanguage=='mm'){
+        }else if (selectedLanguage === 'mm' || selectedLanguage === 'mm2') {
             filePath = "/static/game/audio/male/stop.mp3";
             var audio = new Audio(filePath);
             audio.play();
@@ -314,7 +321,7 @@ startbtn.onclick = function(){
             filePath = "/static/game/audio/start.mp3";
             var audio = new Audio(filePath);
             audio.play();
-        }else if (selectedLanguage=='mm'){
+        }else if (selectedLanguage === 'mm' || selectedLanguage === 'mm2') {
             filePath = "/static/game/audio/male/start.mp3";
             var audio = new Audio(filePath);
             audio.play();
@@ -585,7 +592,7 @@ console.log(patterns);
             filePath = "/static/game/audio/male/"+audiotxt+".mp3";
             var audio = new Audio(filePath);
             audio.play();
-        }else if (selectedLanguage=='mm'){
+        }else if (selectedLanguage === 'mm' || selectedLanguage === 'mm2') {
             filePath = "/static/game/audio/male/"+audiotxt+".mp3";
             var audio = new Audio(filePath);
             audio.play();
@@ -667,7 +674,7 @@ console.log(patterns);
             filePath = "/static/game/audio/male/nobingo.mp3";
             var audio = new Audio(filePath);
             audio.play();
-        }else if (selectedLanguage=='mm'){
+        }else if (selectedLanguage === 'mm' || selectedLanguage === 'mm2') {
             filePath = "/static/game/audio/male/nobingo.mp3";
             var audio = new Audio(filePath);
             audio.play();

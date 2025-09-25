@@ -146,11 +146,7 @@ callerLanguageSelect.addEventListener('change', function() {
     deleteCookie("selectedLanguage");
     setCookie("selectedLanguage",selectedLanguage,7);
     // Pass the selected language to the speakNumber function
-    if(selectedNewLanguage=='am'){
-        selectedLanguage = 'am';
-    }else if(selectedNewLanguage=='mm'){
-        selectedLanguage = 'mm';
-    }else{
+    if(selectedNewLanguage!='am' || selectedNewLanguage!='mm'){
       speech.voice = voices[0];
     }
 });

@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from account.models import Account, UserGameCounter
-from agent.models import Agent
+from agent.models import Agent, AgentAccount
 from cashier.models import Cashier
 from game.models import CashierGame, UserGame
 from django.views.decorators.csrf import csrf_exempt
@@ -33,7 +33,7 @@ def login_view(request):
                     if user.is_superuser:  # Check if the user is an admin (staff member)
                         login(request, user)
                         return redirect('super_admin')  # Redirect to the owner's dashboard
-                    
+
                     else:
                         login(request, user)
                         try:
@@ -75,6 +75,25 @@ def dashboard_view(request):
     game_counter = 0
     today_game_counter = UserGameCounter.objects.get(user=user)
     acc = Account.objects.get(user=user)
+
+    agent_accounts=[]
+
+    if acc.agent:
+        agent_accounts=AgentAccount.objects.filter(
+            agent=acc.agent,
+            is_active=True
+        ).order_by('payment_method')
+
+    agent_accounts_data = [
+        {
+            'id': agent_acc.id,
+            'account_number': agent_acc.account_number,
+            'payment_method_label': agent_acc.get_payment_method_display(),
+            'account_owner_name': agent_acc.account_owner_name,
+        }
+        for agent_acc in agent_accounts
+    ]
+
     if request.POST:
         selected_date = request.POST.get('datefilter')
         if selected_date:
@@ -105,7 +124,7 @@ def dashboard_view(request):
                 today_earning += game.game.shop_cut
                 game_counter+= 1
                 admin_cut+= game.game.admin_cut
-                
+
                 if is_cashier:
                     cashier_data = []
                     for cashier in cashiers:
@@ -121,12 +140,14 @@ def dashboard_view(request):
                         'game': game.game
                     })
             cashier_stat_list = []
-            
+
             if is_cashier:
                 cashier_stat_list = [{'name': cashier.name, 'earning': cashier_stat[cashier.name]} for cashier in cashiers]
 
-            context={'acc':acc,'counter':game_counter,'letest_games':latest_user_games,'today_earning':today_earning,'admin_cut':admin_cut,'filter':True,'cashier':is_cashier,'game_data':game_data,'cashier_stat':cashiers,'cashier_earning':cashier_stat_list}
-            
+            context={'acc':acc,'counter':game_counter,'letest_games':latest_user_games,'today_earning':today_earning,'admin_cut':admin_cut,'filter':True,'cashier':is_cashier,'game_data':game_data,'cashier_stat':cashiers,'cashier_earning':cashier_stat_list,
+             'agents_accounts':agent_accounts_data,
+                     }
+
             return render(request,'account/dashboard.html',context)
 
     latest_user_games = UserGame.objects.filter(user=user).order_by('-created_at')[:100]
@@ -167,7 +188,8 @@ def dashboard_view(request):
     if is_cashier:
         cashier_stat_list = [{'name': cashier.name, 'earning': cashier_stat[cashier.name]} for cashier in cashiers]
 
-    context={'acc':acc,'counter':today_game_counter.game_counter,'letest_games':latest_user_games,'today_earning':today_earning,'cashier':is_cashier,'game_data':game_data[:100],'cashier_stat':cashiers,'cashier_earning':cashier_stat_list}
+    context={'acc':acc,'counter':today_game_counter.game_counter,'letest_games':latest_user_games,'today_earning':today_earning,'cashier':is_cashier,'game_data':game_data[:100],'cashier_stat':cashiers,'cashier_earning':cashier_stat_list,'agents_accounts':agent_accounts_data,
+             }
     return render(request,'account/dashboard.html',context)
 
 

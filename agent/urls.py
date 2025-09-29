@@ -20,5 +20,10 @@ urlpatterns = [
     path('super_admin/add_balance/',views.agent_add_balance,name="agent_add_balance"),
     path('super_admin/edit_agent/',views.edit_agent,name="edit_agent"),
     path('super_admin/',views.super_admin_view,name="super_admin"),
-    path('super_admin/view_agent/<int:id>/',views.view_agent_view,name="view_agent")
+    path('super_admin/view_agent/<int:id>/',views.view_agent_view,name="view_agent"),
+    path('create-agent-account/', views.create_agent_account, name='create_agent_account'),
+    path('my-accounts/', views.list_my_accounts, name='list_my_accounts'),
+    path('agent-accounts/', views.list_agent_accounts_for_shop, name='list_agent_accounts_for_shop'),
+    path('shop-auto-deposit/', views.shop_auto_deposit, name='shop_auto_deposit'),
+
 ]

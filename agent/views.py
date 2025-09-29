@@ -1,28 +1,34 @@
+import json
 from datetime import datetime, timedelta
 from decimal import Decimal
-from django.http import JsonResponse
-from django.shortcuts import redirect, render
+
+import requests
 from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
-from django.db import connection, models
+from django.db import connection
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.utils.timezone import now
+from django.views.decorators.csrf import csrf_exempt
 
 from account.models import Account, UserGameCounter, Deposit
-from agent.models import Agent
+from account.models import Account as ShopAccount
+from agent.models import Agent, Transaction, AgentAccount
 from cashier.models import Cashier
-from game.models import UserGame
+# from .models import AgentAccount, Transaction
+
+
 # Create your views here.
 
 @login_required
 def agent_index_view(request):
     agent = Agent.objects.get(user=request.user)
-    
+
     if agent is not None:
         return render(request,'agent/index.html',{'agent':agent})
-    
+
     return redirect('index')
 
 @login_required
@@ -42,7 +48,7 @@ def get_shop_stat(request):
         return JsonResponse({'message': 'ERROR'})
 
     agent_id, agent_account, agent_name, agent_privilege, agent_min_stake = agent
-    
+
     # Get all shop statistics in one optimized query
     with connection.cursor() as cursor:
         cursor.execute("""
@@ -486,11 +492,11 @@ def get_shop_stat_filter(request):
 
         if selected_date:
             start_date_str, end_date_str = selected_date.split(' - ')
-            
+
             # Convert to naive datetime first
             start_date_naive = datetime.strptime(start_date_str, '%m/%d/%Y')
             end_date_naive = datetime.strptime(end_date_str, '%m/%d/%Y')
-            
+
             # Make them timezone-aware using the current timezone
             start_date = timezone.make_aware(start_date_naive, timezone.get_current_timezone())
             end_date = timezone.make_aware(end_date_naive, timezone.get_current_timezone()) + timedelta(days=1) - timedelta(seconds=1)
@@ -572,7 +578,7 @@ def admin_get_shop_stat_filter(request, id):
     today = timezone.now().date()
     selected_date = request.GET.get('datefilter', None)
     user = get_object_or_404(User, id=int(id))
-    
+
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT id, account, name, privilege, min_stake 
@@ -580,12 +586,12 @@ def admin_get_shop_stat_filter(request, id):
             WHERE user_id = %s
         """, [user.id])
         agent = cursor.fetchone()
-        
+
         if not agent:
             return JsonResponse({'message': 'Agent not found'}, status=404)
-        
+
         agent_id, agent_account, agent_name, agent_privilege, agent_min_stake = agent
-        
+
         cursor.execute("""
             SELECT a.id, a.name, a.account, a.percentage, a.cut_percentage, 
                    a.cut_bouldery, a.prepaid, u.id as user_id, u.is_active
@@ -594,9 +600,9 @@ def admin_get_shop_stat_filter(request, id):
             WHERE a.agent_id = %s
         """, [agent_id])
         shops = cursor.fetchall()
-        
+
         shop_ids = [shop[7] for shop in shops]  # Extract user_ids
-        
+
         if not shop_ids:
             return JsonResponse({
                 'shops_stat': [],
@@ -610,7 +616,7 @@ def admin_get_shop_stat_filter(request, id):
                 'total_earning': 0,
                 'today_earning': 0
             })
-        
+
         if selected_date:
             start_date_str, end_date_str = selected_date.split(' - ')
             start_date = timezone.make_aware(datetime.strptime(start_date_str, '%m/%d/%Y'))
@@ -618,7 +624,7 @@ def admin_get_shop_stat_filter(request, id):
         else:
             start_date = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
             end_date = start_date + timedelta(days=1) - timedelta(seconds=1)
-        
+
         cursor.execute("""
             SELECT ug.user_id, COUNT(ug.id) AS total_games_played, 
                    COALESCE(SUM(CASE WHEN g.created_at >= %s AND g.created_at <= %s THEN g.shop_cut END), 0) AS today_earning,
@@ -628,9 +634,9 @@ def admin_get_shop_stat_filter(request, id):
             WHERE ug.user_id = ANY(%s)
             GROUP BY ug.user_id
         """, [start_date, end_date, list(shop_ids)])
-        
+
         game_stats = {stat[0]: stat[1:] for stat in cursor.fetchall()}
-        
+
         cursor.execute("""
             SELECT user_id, game_counter 
             FROM account_usergamecounter 
@@ -638,11 +644,11 @@ def admin_get_shop_stat_filter(request, id):
             AND last_game_date = %s
         """, [list(shop_ids), today])
         game_counters = {row[0]: row[1] for row in cursor.fetchall()}
-    
+
     shops_stat = []
     total_agent_earning = 0
     today_agent_earning = 0
-    
+
     for shop in shops:
         user_id = shop[7]
         stat = game_stats.get(user_id, (0, 0, 0))
@@ -663,14 +669,14 @@ def admin_get_shop_stat_filter(request, id):
         total_agent_earning += stat[2]
         today_agent_earning += stat[1]
         shops_stat.append(shop_stat)
-    
+
     agent_data = {
         'account': agent_account,
         'name': agent_name,
         'privilege': agent_privilege,
         'min_stake': agent_min_stake
     }
-    
+
     context = {
         'shops_stat': shops_stat,
         'agent': agent_data,
@@ -678,7 +684,7 @@ def admin_get_shop_stat_filter(request, id):
         'total_earning': round(total_agent_earning, 2),
         'today_earning': round(today_agent_earning, 2)
     }
-    
+
     return JsonResponse(context)
 
 @csrf_exempt
@@ -694,7 +700,7 @@ def add_shop(request):
                 phone_number = request.GET['phone_number']
                 percentage = request.GET['percentage']
                 min_stake = request.GET['min_stake']
-                
+
 
                 user = User.objects.create_user(username=user_name, email=user_name+'@goldenbingos.com', password=password)
                 user.save()
@@ -737,13 +743,13 @@ def add_shop(request):
 
                 context={'message':'Successfuly added shop '+acc.name}
                 return JsonResponse(context)
-            
+
             except ValueError:
                 context={'message':'Error has Happened'}
                 return JsonResponse(context)
-        
+
         return redirect('agent_index')
-    
+
     return redirect('index')
 
 @csrf_exempt
@@ -764,15 +770,15 @@ def activate_deactivate_view(request):
 
                 context={'message':'Successfully changed shop '}
                 return JsonResponse(context)
-            
+
             except ValueError:
                 context={'message':'Error has Happened'}
                 return JsonResponse(context)
-        
+
         return redirect('agent_index')
-    
+
     return redirect('index')
-            
+
 
 @csrf_exempt
 @login_required
@@ -786,7 +792,7 @@ def get_shop_info(request):
 
                 acc = Account.objects.get(user=user)
                 shop_stat = {}
-                
+
                 shop_stat['account'] = round(float(acc.account),2)
                 shop_stat['name'] = acc.name
                 shop_stat['percentage'] = acc.percentage
@@ -815,13 +821,13 @@ def get_shop_info(request):
                 }
 
                 return JsonResponse(context)
-            
+
             except ValueError:
                 context={'message':'Error has Happened'}
                 return JsonResponse(context)
-        
+
         return redirect('agent_index')
-    
+
     return redirect('index')
 
 @csrf_exempt
@@ -838,6 +844,16 @@ def add_balance(request):
                 balance = request.GET.get('account')
                 amount = Decimal(balance)
 
+                # Helper to create manual transaction
+                def log_manual_transaction():
+                    Transaction.objects.create(
+                        transaction_id=None,
+                        amount=amount,
+                        shop=acc,
+                        agent_account=None,
+                        transaction_type=1,  # Manual
+                    )
+
                 # ✅ Special handling for "offline" agents
                 if "offline" in agent.user.username.lower():
                     if agent.prepaid:
@@ -850,6 +866,7 @@ def add_balance(request):
                             )
                             agent.account -= amount
                             agent.save()
+                            log_manual_transaction()
                             context = {'message': 'Deposit created (pending approval).'}
                         else:
                             context = {'message': 'Insufficient balance!!'}
@@ -860,6 +877,7 @@ def add_balance(request):
                             amount=amount,
                             status=False
                         )
+                        log_manual_transaction()
                         context = {'message': 'Deposit created (pending approval).'}
 
                 else:
@@ -869,12 +887,14 @@ def add_balance(request):
                         agent.account -= amount
                         agent.save()
                         acc.save()
+                        log_manual_transaction()
                         context = {'message': 'Successfully added balance to shop'}
                     elif not agent.prepaid:
                         acc.account += amount
                         agent.account -= amount
                         agent.save()
                         acc.save()
+                        log_manual_transaction()
                         context = {'message': 'Successfully added balance to shop'}
                     else:
                         context = {'message': 'Insufficient balance!!'}
@@ -888,6 +908,7 @@ def add_balance(request):
         return redirect('agent_index')
 
     return redirect('index')
+
 
 
 @csrf_exempt
@@ -928,13 +949,13 @@ def edit_shop(request):
 
                 context={'message':'Successfuly Edited shop '+acc.name}
                 return JsonResponse(context)
-            
+
             except ValueError:
                 context={'message':'Error has Happened'}
                 return JsonResponse(context)
-        
+
         return redirect('agent_index')
-    
+
     return redirect('index')
 
 
@@ -975,13 +996,13 @@ def add_agent(request):
 
                 context={'message':'Successfuly added Agent '+acc.name}
                 return JsonResponse(context)
-            
+
             except ValueError:
                 context={'message':'Error has Happened'}
                 return JsonResponse(context)
-        
+
         return redirect('super_admin')
-    
+
     return redirect('index')
 
 @csrf_exempt
@@ -1001,15 +1022,15 @@ def agent_activate_deactivate_view(request):
 
                 context={'message':'Successfully changed Agent '}
                 return JsonResponse(context)
-            
+
             except ValueError:
                 context={'message':'Error has Happened'}
                 return JsonResponse(context)
-        
+
         return redirect('super_admin')
-    
+
     return redirect('index')
-            
+
 
 @csrf_exempt
 @login_required
@@ -1022,7 +1043,7 @@ def get_agent_info(request):
 
                 acc = Agent.objects.get(user=user)
                 shop_stat = {}
-                
+
                 shop_stat['balance'] = round(float(acc.account),2)
                 shop_stat['name'] = acc.name
                 shop_stat['percentage'] = acc.percentage
@@ -1035,13 +1056,13 @@ def get_agent_info(request):
                 shop_stat['password'] = acc.backup_password
 
                 return JsonResponse(shop_stat)
-            
+
             except ValueError:
                 context={'message':'Error has Happened'}
                 return JsonResponse(context)
-        
+
         return redirect('super_admin')
-    
+
     return redirect('index')
 
 @csrf_exempt
@@ -1061,9 +1082,9 @@ def agent_add_balance(request):
             except ValueError:
                 context={'message':'Error has Happened'}
                 return JsonResponse(context)
-        
+
         return redirect('super_admin')
-    
+
     return redirect('index')
 
 @csrf_exempt
@@ -1097,13 +1118,13 @@ def edit_agent(request):
 
                 context={'message':'Successfuly Edited Agent '+acc.name}
                 return JsonResponse(context)
-            
+
             except ValueError:
                 context={'message':'Error has Happened'}
                 return JsonResponse(context)
-        
+
         return redirect('super_admin')
-    
+
     return redirect('index')
 
 
@@ -1118,6 +1139,303 @@ def view_agent_view(request,id):
             return render(request,'agent/agent_stat.html',{'agent':acc})
         except ValueError:
             return redirect('super_admin')
-            
+
     return redirect('super_admin')
-    
+
+@csrf_exempt
+@login_required
+def create_agent_account(request):
+    if request.method != 'POST':
+        return JsonResponse({'error':'Only POST allowed'})
+
+    try:
+        data=json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error':'Invalid JSON'},status=400)
+
+    account_number=data.get('account_number')
+    payment_method_str=data.get('payment_method')
+    account_owner_name=data.get('account_owner_name','').strip()
+
+    try:
+        payment_method=int(payment_method_str)
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'Valid payment_method is required (1=TELEBIRR, 2=CBE, etc.)'}, status=400)
+
+
+    try:
+        agent=request.user.agent
+    except Agent.DoesNotExist:
+        return JsonResponse({'error': 'No agent profile found for this user'}, status=404)
+
+    if not account_number:
+        return JsonResponse({'error': 'account_number is required'}, status=400)
+
+    if payment_method not in dict(AgentAccount.PAYMENT_METHOD_CHOICES).keys():
+        return JsonResponse({'error': 'Invalid payment_method'}, status=400)
+    if AgentAccount.objects.filter(agent=agent, payment_method=payment_method).exists():
+        method_name = dict(AgentAccount.PAYMENT_METHOD_CHOICES)[payment_method]
+        return JsonResponse({
+            'error': f'You already have a {method_name} account. Delete it first to add a new one.'
+        }, status=400)
+
+    try:
+        account=AgentAccount.objects.create(
+            agent=agent,
+            account_number=account_number,
+            payment_method=payment_method,
+            account_owner_name=account_owner_name,
+            is_active=True,
+        )
+        # ✅ Convert model to dict before returning
+        account_data = {
+            'id': account.id,
+            'account_number': account.account_number,
+            'payment_method': account.payment_method,
+            'payment_method_label': account.get_payment_method_display(),
+            'account_owner_name': account.account_owner_name,
+            'is_active': account.is_active,
+            'created_at': account.created_at.isoformat()
+        }
+
+        return JsonResponse({
+            'message': 'Agent account created successfully',
+            'account': account_data
+        }, status=201)
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to create account: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@login_required
+def list_my_accounts(request):
+    try:
+        agent=request.user.agent
+    except:
+        return JsonResponse({'error': 'No agent profile found for this user'}, status=404)
+    accounts=AgentAccount.objects.filter(agent=agent)
+
+    data = [
+        {
+            'id': acc.id,
+            'account_number': acc.account_number,
+            'payment_method': acc.payment_method,
+            'payment_method_label': acc.get_payment_method_display(),
+            'is_active': acc.is_active,
+            'created_at': acc.created_at.isoformat(),
+            'updated_at': acc.updated_at.isoformat(),
+            'account_owner_name': acc.account_owner_name,
+        }
+        for acc in accounts
+    ]
+
+    return JsonResponse(
+        {
+            'accounts': data,
+            'count':len(data)
+        },status=200
+    )
+
+
+@csrf_exempt
+@login_required
+def list_agent_accounts_for_shop(request):
+    try:
+        # Get the shop (Account) linked to this user
+        shop = request.user.account  # Assumes OneToOneField(Account, User)
+    except ShopAccount.DoesNotExist:
+        return JsonResponse({'error': 'No shop account found'}, status=404)
+
+    # Get the agent of this shop
+    agent = shop.agent
+    if not agent:
+        return JsonResponse({'error': 'This shop has no assigned agent'}, status=404)
+
+    # Return only active accounts
+    accounts = AgentAccount.objects.filter(agent=agent, is_active=True)
+
+    data = [
+        {
+            'id': acc.id,
+            'account_number': acc.account_number,
+            'payment_method': acc.payment_method,
+            'payment_method_label': acc.get_payment_method_display(),
+            'account_owner_name': acc.account_owner_name,
+        }
+        for acc in accounts
+    ]
+
+    return JsonResponse({
+        'accounts': data,
+    }, status=200)
+
+
+
+
+# External verifier base URL
+VERIFIER_BASE = "http://88.99.189.198:8001/api/verify/"
+
+# Payment method → endpoint mapping (keys are integers!)
+ENDPOINTS = {
+    1: "verify-telebirr/",
+    2: "verify-cbe/",
+    3: "verify-boa/",
+    4: "verify-cbebirr/",
+}
+
+
+@csrf_exempt
+@login_required
+def shop_auto_deposit(request):
+    """
+    Handle automatic deposit with dynamic payload per payment method.
+    Supports:
+      - TeleBirr: receipt_no
+      - CBE: transaction_id + account_number
+      - CBE_BIRR: transaction_id + phone (same as account_number)
+      - BOA: transaction_id
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    transaction_id = data.get('transaction_id')
+    agent_account_id_str = data.get('agent_account_id')
+
+    if not transaction_id or not agent_account_id_str:
+        return JsonResponse({
+            'error': 'Missing required fields: transaction_id or agent_account_id'
+        }, status=400)
+
+    try:
+        agent_account_id = int(agent_account_id_str)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid agent_account_id'}, status=400)
+
+    # Get the shop (Account) linked to logged-in user
+    try:
+        shop = request.user.account
+    except ShopAccount.DoesNotExist:
+        return JsonResponse({'error': 'Shop profile not found'}, status=404)
+
+    # Get agent account
+    try:
+        agent_account = AgentAccount.objects.get(id=agent_account_id, is_active=True)
+    except AgentAccount.DoesNotExist:
+        return JsonResponse({'error': 'Account not found or inactive'}, status=404)
+
+    # Prevent duplicate deposits
+    if Transaction.objects.filter(transaction_id=transaction_id).exists():
+        return JsonResponse({
+            'error': 'This transaction ID has already been used.'
+        }, status=400)
+
+    # Ensure payment_method is integer
+    try:
+        payment_method = int(agent_account.payment_method)
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'Invalid payment method'}, status=500)
+
+    if payment_method not in ENDPOINTS:
+        return JsonResponse({'error': 'Unsupported payment method'}, status=400)
+
+    # ✅ Build payload based on payment method
+    api_url = f"{VERIFIER_BASE}{ENDPOINTS[payment_method]}"
+    payload = {}
+
+    if payment_method == 1:  # TeleBirr
+        payload["receipt_no"] = transaction_id
+
+    elif payment_method == 2:  # CBE
+        payload["transaction_id"] = transaction_id
+        payload["account_number"] = agent_account.account_number or str(agent_account.id)
+
+    elif payment_method == 3:  # BOA
+        payload["transaction_id"] = transaction_id
+
+    elif payment_method == 4:  # CBE_BIRR
+        payload["transaction_id"] = transaction_id
+        payload["phone"] = agent_account.account_number or str(agent_account.id)
+
+    # Make external API call
+    try:
+        response = requests.post(api_url, json=payload, timeout=15)
+        if response.status_code != 200:
+            return JsonResponse({
+                'error': 'Verification failed',
+                'details': response.text,
+                'status_code': response.status_code
+            }, status=response.status_code)
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({
+            'error': f'API request failed: {str(e)}'
+        }, status=500)
+
+    # Parse JSON response
+    try:
+        full_response = response.json()
+        if full_response.get("status") != "success":
+            return JsonResponse({
+                'error': 'Verification failed: Invalid receipt or parsing error'
+            }, status=400)
+    except Exception:
+        return JsonResponse({
+            'error': 'Invalid JSON response from verifier'
+        }, status=500)
+
+    # Extract amount from data.amount
+    data_obj = full_response.get("data")
+    if not data_obj or not isinstance(data_obj, dict):
+        return JsonResponse({
+            'error': 'Invalid response structure: missing "data"'
+        }, status=500)
+
+    amount_value = data_obj.get("amount")
+    if amount_value is None:
+        return JsonResponse({'error': 'Amount missing in verification response'}, status=500)
+
+    try:
+        verified_amount = Decimal(str(amount_value))
+        if verified_amount <= 0:
+            return JsonResponse({'error': 'Invalid amount: must be positive'}, status=400)
+    except (ValueError, TypeError, Decimal.InvalidOperation):
+        return JsonResponse({'error': 'Invalid amount format'}, status=500)
+
+    # ✅ For TeleBirr: verify credited_party_name matches
+    if payment_method == 1:
+        credited_name = str(data_obj.get('credited_party_name', '')).strip()
+        expected_name = str(agent_account.account_owner_name or '').strip()
+
+        if not credited_name:
+            return JsonResponse({'error': 'credited_party_name missing in response'}, status=500)
+        if not expected_name:
+            return JsonResponse({'error': 'Agent account owner name not set'}, status=500)
+
+        if credited_name.lower() != expected_name.lower():
+            return JsonResponse({
+                'error': f'Name mismatch: Expected "{expected_name}", got "{credited_name}"'
+            }, status=400)
+
+    # ✅ All checks passed — update shop balance
+    shop.account += verified_amount
+    shop.save()
+
+    # ✅ Save transaction record
+    Transaction.objects.create(
+        transaction_id=transaction_id,
+        amount=verified_amount,
+        shop=shop,
+        agent_account=agent_account,
+        transaction_type=0  # Automatic
+    )
+
+    return JsonResponse({
+        'message': 'Deposit verified and balance updated successfully.',
+        'new_balance': f'{shop.account:.2f}',
+        'amount': f'{verified_amount:.2f}',
+        'transaction_id': transaction_id
+    }, status=200)

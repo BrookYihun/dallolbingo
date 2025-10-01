@@ -1430,7 +1430,8 @@ def shop_auto_deposit(request):
         amount=verified_amount,
         shop=shop,
         agent_account=agent_account,
-        transaction_type=0  # Automatic
+        transaction_type=0,  # Automatic
+        status=1  # Success
     )
 
     return JsonResponse({

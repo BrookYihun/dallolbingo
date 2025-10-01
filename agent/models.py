@@ -51,6 +51,7 @@ class Transaction(models.Model):
     created_at=models.DateTimeField(auto_now_add=True)
     updated_at=models.DateTimeField(auto_now=True)
     transaction_id=models.CharField(max_length=255,blank=True,null=True,unique=True)
+    status=models.SmallIntegerField(default=0)  # 0-pending,1-success,2-failed
 
     agent_account=models.ForeignKey(
         'AgentAccount',

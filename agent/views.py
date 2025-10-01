@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 import requests
 from django.contrib.auth.decorators import login_required
@@ -1270,8 +1270,6 @@ def list_agent_accounts_for_shop(request):
     }, status=200)
 
 
-
-
 # External verifier base URL
 VERIFIER_BASE = "http://88.99.189.198:8001/api/verify/"
 
@@ -1287,21 +1285,13 @@ ENDPOINTS = {
 @csrf_exempt
 @login_required
 def shop_auto_deposit(request):
-    """
-    Handle automatic deposit with dynamic payload per payment method.
-    Supports:
-      - TeleBirr: receipt_no
-      - CBE: transaction_id + account_number
-      - CBE_BIRR: transaction_id + phone (same as account_number)
-      - BOA: transaction_id
-    """
     if request.method != 'POST':
-        return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        return JsonResponse({'error': 'Invalid request format. Expected JSON.'}, status=400)
 
     transaction_id = data.get('transaction_id')
     agent_account_id_str = data.get('agent_account_id')
@@ -1314,19 +1304,19 @@ def shop_auto_deposit(request):
     try:
         agent_account_id = int(agent_account_id_str)
     except (ValueError, TypeError):
-        return JsonResponse({'error': 'Invalid agent_account_id'}, status=400)
+        return JsonResponse({'error': 'Agent account ID must be a valid integer.'}, status=400)
 
-    # Get the shop (Account) linked to logged-in user
+    # Get shop account
     try:
         shop = request.user.account
     except ShopAccount.DoesNotExist:
-        return JsonResponse({'error': 'Shop profile not found'}, status=404)
+        return JsonResponse({'error': 'Shop profile not found for this user.'}, status=404)
 
     # Get agent account
     try:
         agent_account = AgentAccount.objects.get(id=agent_account_id, is_active=True)
     except AgentAccount.DoesNotExist:
-        return JsonResponse({'error': 'Account not found or inactive'}, status=404)
+        return JsonResponse({'error': 'Agent account not found or inactive.'}, status=404)
 
     # Prevent duplicate deposits
     if Transaction.objects.filter(transaction_id=transaction_id).exists():
@@ -1334,14 +1324,14 @@ def shop_auto_deposit(request):
             'error': 'This transaction ID has already been used.'
         }, status=400)
 
-    # Ensure payment_method is integer
+    # Ensure payment_method is valid integer
     try:
         payment_method = int(agent_account.payment_method)
     except (TypeError, ValueError):
-        return JsonResponse({'error': 'Invalid payment method'}, status=500)
+        return JsonResponse({'error': 'Invalid payment method configuration for this agent.'}, status=500)
 
     if payment_method not in ENDPOINTS:
-        return JsonResponse({'error': 'Unsupported payment method'}, status=400)
+        return JsonResponse({'error': 'Unsupported payment method selected.'}, status=400)
 
     # ✅ Build payload based on payment method
     api_url = f"{VERIFIER_BASE}{ENDPOINTS[payment_method]}"
@@ -1349,103 +1339,99 @@ def shop_auto_deposit(request):
 
     if payment_method == 1:  # TeleBirr
         payload["receipt_no"] = transaction_id
-
     elif payment_method == 2:  # CBE
         payload["transaction_id"] = transaction_id
         payload["account_number"] = agent_account.account_number or str(agent_account.id)
-
     elif payment_method == 3:  # BOA
         payload["transaction_id"] = transaction_id
-
     elif payment_method == 4:  # CBE_BIRR
         payload["transaction_id"] = transaction_id
         payload["phone"] = agent_account.account_number or str(agent_account.id)
 
-    # Make external API call
+    # Call external API
     try:
         response = requests.post(api_url, json=payload, timeout=15)
-        if response.status_code != 200:
-            return JsonResponse({
-                'error': 'Verification failed',
-                'details': response.text,
-                'status_code': response.status_code
-            }, status=response.status_code)
     except requests.exceptions.RequestException as e:
+        return JsonResponse({'error': f'Could not reach verification server: {str(e)}'}, status=500)
+
+    if response.status_code != 200:
         return JsonResponse({
-            'error': f'API request failed: {str(e)}'
-        }, status=500)
+            'error': 'Verification request failed.',
+            'details': response.text[:300]  # show short details
+        }, status=response.status_code)
 
-        # Parse JSON response safely
+    # Parse JSON safely
     try:
-        if "application/json" not in response.headers.get("Content-Type", ""):
-            return JsonResponse({
-                'error': 'Verifier did not return JSON',
-                'raw_response': response.text[:500]  # return first 500 chars for debugging
-            }, status=500)
-
         full_response = response.json()
     except ValueError:
         return JsonResponse({
-            'error': 'Invalid JSON response from verifier',
-            'raw_response': response.text[:500]
+            'error': 'Verification server returned invalid data.',
+            'raw_response': response.text[:300]
         }, status=500)
 
     if full_response.get("status") != "success":
         return JsonResponse({
-            'error': 'Verification failed',
-            'details': full_response
+            'error': 'Transaction could not be verified.',
+            'reason': full_response.get("detail") or full_response
         }, status=400)
-    # Extract amount from data.amount
+
     data_obj = full_response.get("data")
     if not data_obj or not isinstance(data_obj, dict):
-        return JsonResponse({
-            'error': 'Invalid response structure: missing "data"'
-        }, status=500)
+        return JsonResponse({'error': 'Verification response missing transaction details.'}, status=500)
 
+    # ✅ Extract amount
     amount_value = data_obj.get("amount")
-    if amount_value is None:
-        return JsonResponse({'error': 'Amount missing in verification response'}, status=500)
-
     try:
         verified_amount = Decimal(str(amount_value))
         if verified_amount <= 0:
-            return JsonResponse({'error': 'Invalid amount: must be positive'}, status=400)
-        # elif verified_amount < Decimal('1000'):
-        #     return JsonResponse({'error': 'Minimum deposit amount is 1000'}, status=400)
-    except (ValueError, TypeError, Decimal.InvalidOperation):
-        return JsonResponse({'error': 'Invalid amount format'}, status=500)
+            return JsonResponse({'error': 'Invalid transaction amount.'}, status=400)
+    except (InvalidOperation, TypeError):
+        return JsonResponse({'error': 'Invalid amount format from verification server.'}, status=500)
 
-    # ✅ For TeleBirr: verify credited_party_name matches
+    # ✅ Check transaction date (not older than 2 days)
+    date_fields = ["payment_date", "date", "transaction_date"]
+    tx_date = None
+    for field in date_fields:
+        if data_obj.get(field):
+            try:
+                tx_date = datetime.fromisoformat(data_obj[field].replace("Z", "+00:00"))
+                break
+            except Exception:
+                continue
+
+    if tx_date:
+        if tx_date < datetime.now(tx_date.tzinfo) - timedelta(days=2):
+            return JsonResponse({
+                'error': 'Transaction is older than 2 days and cannot be used.'
+            }, status=400)
+
+    # ✅ For TeleBirr: verify credited_party_name
     if payment_method == 1:
         credited_name = str(data_obj.get('credited_party_name', '')).strip()
         expected_name = str(agent_account.account_owner_name or '').strip()
-
-        if not credited_name:
-            return JsonResponse({'error': 'credited_party_name missing in response'}, status=500)
-        if not expected_name:
-            return JsonResponse({'error': 'Agent account owner name not set'}, status=500)
-
-        if credited_name.lower() != expected_name.lower():
+        if not credited_name or not expected_name or credited_name.lower() != expected_name.lower():
             return JsonResponse({
-                'error': f'Name mismatch: Expected "{expected_name}", got "{credited_name}"'
+                'error': f'Transaction account name does not match. Expected "{expected_name}", got "{credited_name}".'
             }, status=400)
 
-    # ✅ All checks passed — update shop balance
-    shop.account += verified_amount
-    shop.save()
+    # ✅ All checks passed — update shop balance + save transaction
+    try:
+        shop.account += verified_amount
+        shop.save()
 
-    # ✅ Save transaction record
-    Transaction.objects.create(
-        transaction_id=transaction_id,
-        amount=verified_amount,
-        shop=shop,
-        agent_account=agent_account,
-        transaction_type=0,  # Automatic
-        status=1  # Success
-    )
+        Transaction.objects.create(
+            transaction_id=transaction_id,
+            amount=verified_amount,
+            shop=shop,
+            agent_account=agent_account,
+            transaction_type=0,  # Automatic
+            status=1  # Success
+        )
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to record transaction: {str(e)}'}, status=500)
 
     return JsonResponse({
-        'message': 'Deposit verified and balance updated successfully.',
+        'message': 'Deposit verified successfully.',
         'new_balance': f'{shop.account:.2f}',
         'amount': f'{verified_amount:.2f}',
         'transaction_id': transaction_id

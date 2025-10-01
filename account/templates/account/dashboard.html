@@ -337,6 +337,15 @@
         <div class="modal-content">
             <span class="close-btn" id="closeDepositBtn">&times;</span>
             <h2>Make a Deposit</h2>
+
+            <!-- Amharic Instructions -->
+            <div class="info-box" style="background:#f9f9f9; padding:10px; border-radius:5px; margin-bottom:10px;">
+                <p>1. ክታች በሚታየው አካውንት ቁጥር ብሩን ያስገቡ።</p>
+                <p>2. ከታች ባለው ቦታ ትራንዛክሽን ቁጥሩን (Transaction ID) ያስገቡ።</p>
+                <p>3. ዝቅተኛ የዝውውር መጠን $1000 ብር ነው።</p>
+                <p>4. ክባንክ ወደ ባንክ ዝውውር አይቻልም።</p>
+            </div>
+
             <form id="depositForm">
                 {% csrf_token %}
                 <label for="account">Select Account</label>
@@ -351,7 +360,7 @@
                 </select>
 
                 <div id="accountInfo" class="info-box d-none">
-                    <p><Strong>Minimum Amount:</Strong><span>$ 1000</span></p>
+                    <!-- Removed Minimum Amount line -->
                     <p><strong>Payment Method:</strong> <span id="methodText"></span></p>
                     <p><strong>Account Owner:</strong> <span id="ownerText"></span></p>
                     <p><strong>Account Number:</strong> <span id="accountNum"></span></p>
@@ -364,9 +373,9 @@
 
                 <button type="submit" class="cutm-btn mt-2">Submit</button>
             </form>
-
         </div>
     </div>
+
 
 </section>
 

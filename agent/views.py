@@ -1385,6 +1385,8 @@ def shop_auto_deposit(request):
         verified_amount = Decimal(str(amount_value))
         if verified_amount <= 0:
             return JsonResponse({'error': 'Invalid transaction amount.'}, status=400)
+        elif verified_amount < Decimal('1000'):
+            return JsonResponse({'error': 'Transaction amount is below the minimum of 1000.'}, status=400)
     except (InvalidOperation, TypeError):
         return JsonResponse({'error': 'Invalid amount format from verification server.'}, status=500)
 

@@ -1375,18 +1375,26 @@ def shop_auto_deposit(request):
             'error': f'API request failed: {str(e)}'
         }, status=500)
 
-    # Parse JSON response
+        # Parse JSON response safely
     try:
-        full_response = response.json()
-        if full_response.get("status") != "success":
+        if "application/json" not in response.headers.get("Content-Type", ""):
             return JsonResponse({
-                'error': 'Verification failed: Invalid receipt or parsing error'
-            }, status=400)
-    except Exception:
+                'error': 'Verifier did not return JSON',
+                'raw_response': response.text[:500]  # return first 500 chars for debugging
+            }, status=500)
+
+        full_response = response.json()
+    except ValueError:
         return JsonResponse({
-            'error': 'Invalid JSON response from verifier'
+            'error': 'Invalid JSON response from verifier',
+            'raw_response': response.text[:500]
         }, status=500)
 
+    if full_response.get("status") != "success":
+        return JsonResponse({
+            'error': 'Verification failed',
+            'details': full_response
+        }, status=400)
     # Extract amount from data.amount
     data_obj = full_response.get("data")
     if not data_obj or not isinstance(data_obj, dict):
@@ -1402,8 +1410,8 @@ def shop_auto_deposit(request):
         verified_amount = Decimal(str(amount_value))
         if verified_amount <= 0:
             return JsonResponse({'error': 'Invalid amount: must be positive'}, status=400)
-        elif verified_amount < Decimal('1000'):
-            return JsonResponse({'error': 'Minimum deposit amount is 1000'}, status=400)
+        # elif verified_amount < Decimal('1000'):
+        #     return JsonResponse({'error': 'Minimum deposit amount is 1000'}, status=400)
     except (ValueError, TypeError, Decimal.InvalidOperation):
         return JsonResponse({'error': 'Invalid amount format'}, status=500)
 

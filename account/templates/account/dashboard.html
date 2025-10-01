@@ -7,24 +7,154 @@
 <link rel="stylesheet" href="{% static 'account/css/styles2.css' %}">
 <link rel="stylesheet" href="{% static 'game/css/lightpick.css' %}">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
-<script src="{% static "game/js/lightpick.js" %}"></script>
+<script src="{% static " game/js/lightpick.js" %}"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<style>
+    .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.6);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.show {
+        display: flex;
+    }
+
+
+    .modal-content {
+        background: #fff;
+        padding: 25px;
+        border-radius: 15px;
+        width: 100%;
+        max-width: 420px;
+        font-family: 'poetsen', sans-serif;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+        animation: fadeInScale 0.3s ease-out;
+        position: relative;
+    }
+
+
+    .modal-content h2 {
+        margin-bottom: 20px;
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--blue);
+        text-align: center;
+    }
+
+    .modal-content label {
+        display: block;
+        margin-top: 12px;
+        font-size: 14px;
+        color: #333;
+    }
+
+    .modal-content input,
+    .modal-content select {
+        width: 100%;
+        padding: 10px 12px;
+        margin-top: 6px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        font-size: 15px;
+        background-color: #fafafa;
+        transition: border 0.2s ease;
+    }
+
+    .modal-content input:focus,
+    .modal-content select:focus {
+        border: 1px solid var(--blue);
+        outline: none;
+        background-color: #fff;
+    }
+
+    .modal-content button {
+        margin-top: 20px;
+        width: 100%;
+        border-radius: 10px;
+        font-size: 18px;
+    }
+
+    .close-btn {
+        position: absolute;
+        top: 12px;
+        right: 15px;
+        font-size: 26px;
+        cursor: pointer;
+        color: #999;
+        transition: color 0.2s;
+    }
+
+    .close-btn:hover {
+        color: #333;
+    }
+
+    /* Small animation for appearance */
+    @keyframes fadeInScale {
+        from {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .info-box {
+        margin-top: 15px;
+        padding: 12px;
+        border-radius: 10px;
+        background: #f7faff;
+        border: 1px solid #cce1ff;
+        font-size: 14px;
+        color: #333;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .info-box p {
+        margin: 5px 0;
+        font-weight: 500;
+    }
+
+    .d-none {
+        display: none !important;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
 {% endblock st %}
 
 {% block s %}
-<script src="{% static "account/js/script.js" %}" ></script>
+<script src="{% static " account/js/script.js" %}"></script>
 {% endblock s %}
 
 {% block content %}
 {% include "game/base/sidebar.html" %}
+
 <!-- CONTENT -->
 <section id="content">
     <!-- NAVBAR -->
     <nav>
-        <i class='bx bx-menu' ></i>
+        <i class='bx bx-menu'></i>
         <div>
             <h3 class="text-gradient"><span id="d">Dallol</span> Bin<span id="i">g</span>o!</h3>
         </div>
@@ -47,54 +177,59 @@
                 <ul class="breadcrumb">
                     <li>
                         <a href="#">Dashboard</a>
+                        <!-- {{agents_accounts}} -->
                     </li>
                 </ul>
             </div>
             <div class="">
                 <form class="" action="{% url 'dashboard' %}" method="post">{% csrf_token %}
                     <!-- <input class="input-date" type="text" name="datefilter" value="" placeholder="select date" autocomplete="off"/> -->
-                    <input type="text" id="datepicker" name="datefilter" placeholder="select date"/>
+                    <input type="text" id="datepicker" name="datefilter" placeholder="select date" />
                     <input class="cutm-btn" type="submit" name="filter" value="Filter">
                 </form>
             </div>
-            
+
         </div>
 
         <ul class="box-info">
             <li>
-                <i class='bx bxs-joystick' ></i>
+                <i class='bx bxs-joystick'></i>
                 <span class="text">
                     <h3>{{counter}}</h3>
                     <p>Games {% if filter %}{% else %}Today{% endif %}</p>
                 </span>
             </li>
             <li>
-                <i class='bx bxs-dollar-circle' ></i>
+                <i class='bx bxs-dollar-circle'></i>
                 <span class="text">
                     <h3>$ {{today_earning}}</h3>
                     <p>Earning {% if filter %}{% else %}Today{% endif %}</p>
                 </span>
             </li>
             <li>
-                <i class='bx bxs-folder-open' ></i>
+                <i class='bx bxs-folder-open'></i>
                 <span class="text">
                     <h3>$ {% if filter %}{{admin_cut}}{% else %}{{acc.account}}{% endif %}</h3>
-                    <p>{% if filter %}Admin Cut{% else %}Avalible Balance{% endif %}</p>
+                    <p>
+                        {% if filter %}Admin Cut{% else %}Avalible Balance{% endif %}
+                       <button type="button" class="cutm-btn" id="openDepositBtn">Deposit</button>
+                    </p>
                 </span>
             </li>
+
         </ul>
 
         <ul class="box-info">
             {% for cas in cashier_earning %}
 
             <li>
-                <i class='bx bxs-folder-open' ></i>
+                <i class='bx bxs-folder-open'></i>
                 <span class="text">
                     <h3>{{ cas.earning }}</h3>
                     <p>{% if "main" in cas.name %}main{% else %}{{cas.name}}{% endif %}</p>
                 </span>
             </li>
-        
+
             {% endfor %}
         </ul>
 
@@ -126,38 +261,38 @@
                         {%if cashier%}
 
                         {% for game in game_data %}
-                            <tr>
-                            
-                                <td>Game {{game.game.id}}</td>
-                                <td>{{game.game.stake}}</td>
-                                <td>{{game.game.numberofplayers}}</td>
-                                {% for cas in game.cashier_data %}
-                                <td>{{cas.collected}}/{{cas.paid}}</td>
-                                {% endfor%}
-                                <td>{{game.game.total_calls}}</td>
-                                <td>{{game.game.winners}}</td>
-                                <td>{{game.game.bonus_payed}}</td>
-                                <td>{{game.game.free_hit}}</td>
-                                <td>{{game.played}}</td>
-                            
-                            </tr>
+                        <tr>
+
+                            <td>Game {{game.game.id}}</td>
+                            <td>{{game.game.stake}}</td>
+                            <td>{{game.game.numberofplayers}}</td>
+                            {% for cas in game.cashier_data %}
+                            <td>{{cas.collected}}/{{cas.paid}}</td>
+                            {% endfor%}
+                            <td>{{game.game.total_calls}}</td>
+                            <td>{{game.game.winners}}</td>
+                            <td>{{game.game.bonus_payed}}</td>
+                            <td>{{game.game.free_hit}}</td>
+                            <td>{{game.played}}</td>
+
+                        </tr>
                         {% endfor %}
-                        
+
                         {%else%}
 
                         {% for game in letest_games %}
-                            <tr>
-                            
-                                <td>Game {{game.game.id}}</td>
-                                <td>{{game.game.stake}}</td>
-                                <td>{{game.game.numberofplayers}}</td>
-                                <td>{{game.game.total_calls}}</td>
-                                <td>{{game.game.winners}}</td>
-                                <td>{{game.game.bonus_payed}}</td>
-                                <td>{{game.game.free_hit}}</td>
-                                <td>{{game.game.played}}</td>
-                            
-                            </tr>
+                        <tr>
+
+                            <td>Game {{game.game.id}}</td>
+                            <td>{{game.game.stake}}</td>
+                            <td>{{game.game.numberofplayers}}</td>
+                            <td>{{game.game.total_calls}}</td>
+                            <td>{{game.game.winners}}</td>
+                            <td>{{game.game.bonus_payed}}</td>
+                            <td>{{game.game.free_hit}}</td>
+                            <td>{{game.game.played}}</td>
+
+                        </tr>
                         {% endfor %}
 
                         {% endif %}
@@ -196,16 +331,135 @@
         </div>
     </main>
     <!-- MAIN -->
+    <div id="depositModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeDepositBtn">&times;</span>
+            <h2>Make a Deposit</h2>
+            <form id="depositForm">
+                {% csrf_token %}
+                <label for="account">Select Account</label>
+                <select name="agent_account_id" id="account" required>
+                    <option value="" disabled selected>-- Choose Account --</option>
+                    {% for a in agents_accounts %}
+                    <option value="{{a.id}}" data-method="{{a.payment_method_label}}"
+                        data-acc_num="{{a.account_number}}" data-owner="{{a.account_owner_name}}">
+                        {{a.payment_method_label}} - {{a.account_number}}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <div id="accountInfo" class="info-box d-none">
+                    <p><strong>Payment Method:</strong> <span id="methodText"></span></p>
+                    <p><strong>Account Owner:</strong> <span id="ownerText"></span></p>
+                    <p><strong>Account Number:</strong> <span id="accountNum"></span></p>
+                </div>
+
+                <label for="ref">Transaction Ref</label>
+                <input type="text" name="transaction_id" id="ref" required>
+
+                <div id="depositMessage" class="info-box d-none"></div>
+
+                <button type="submit" class="cutm-btn mt-2">Submit</button>
+            </form>
+
+        </div>
+    </div>
+
 </section>
 
 {% endblock %}
-
 {% block JavaScript %}
-<script>  
-    new Lightpick({
-        field: document.getElementById('datepicker'),
-        singleDate: false,
-        format: 'MM/DD/YYYY',
+<script>
+const depositModal = document.getElementById("depositModal");
+const openDepositBtn = document.getElementById("openDepositBtn");
+const closeDepositBtn = document.getElementById("closeDepositBtn");
+const accountSelect = document.getElementById("account");
+const accountInfoBox = document.getElementById("accountInfo");
+const methodText = document.getElementById("methodText");
+const ownerText = document.getElementById("ownerText");
+const accountNum = document.getElementById("accountNum");
+const depositForm = document.getElementById("depositForm");
+const depositMessage = document.getElementById("depositMessage");
+
+// Open modal
+if (openDepositBtn) {
+    openDepositBtn.addEventListener("click", () => {
+        depositModal.classList.add("show");
     });
+}
+
+// Close modal
+if (closeDepositBtn) {
+    closeDepositBtn.addEventListener("click", () => {
+        depositModal.classList.remove("show");
+    });
+}
+
+window.addEventListener("click", (e) => {
+    if (e.target === depositModal) {
+        depositModal.classList.remove("show");
+    }
+});
+
+// Show account details when selected
+if (accountSelect) {
+    accountSelect.addEventListener("change", (e) => {
+        const selected = e.target.options[e.target.selectedIndex];
+        methodText.textContent = selected.getAttribute("data-method");
+        ownerText.textContent = selected.getAttribute("data-owner");
+        accountNum.textContent = selected.getAttribute("data-acc_num");
+        accountInfoBox.classList.remove("d-none");
+    });
+}
+
+// ✅ Submit via fetch
+if (depositForm) {
+    depositForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const transaction_id = document.getElementById("ref").value;
+        const agent_account_id = document.getElementById("account").value;
+
+        depositMessage.classList.remove("d-none");
+        depositMessage.style.color = "black";
+        depositMessage.innerText = "Processing...";
+
+        try {
+            const response = await fetch("{% url 'shop_auto_deposit' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: JSON.stringify({
+                    transaction_id: transaction_id,
+                    agent_account_id: agent_account_id,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                depositMessage.style.color = "green";
+                depositMessage.innerText = result.message + 
+                    " New Balance: $" + result.new_balance;
+                depositForm.reset();
+                accountInfoBox.classList.add("d-none");
+                closeDepositBtn.addEventListener("click", () => {
+                    depositModal.classList.remove("show");
+                });
+                location.reload();
+            } else {
+                depositMessage.style.color = "red";
+                depositMessage.innerText = result.error || "Something went wrong!";
+            }
+        } catch (err) {
+            depositMessage.style.color = "red";
+            depositMessage.innerText = "Request failed: " + err.message;
+        }
+    });
+}
 </script>
+
+
 {% endblock JavaScript %}

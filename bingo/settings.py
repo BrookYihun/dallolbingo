@@ -94,11 +94,12 @@ WSGI_APPLICATION = 'bingo.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'dallol_bingo_local',
-        'USER': 'postgres',
-        'PASSWORD': 'localdev123',
-        'HOST': 'localhost',
-        'PORT': '5433',
+        'NAME': 'dallol_bingo_db',
+        'USER': 'dallol',
+        'PASSWORD': 'Byihun@123',
+        'HOST': 'localhost',  # Typically localhost for shared hosting
+        'PORT': '5432',           # Leave empty if default port 5432 is used
+        'CONN_MAX_AGE': 600,
     }
 }
 
@@ -158,8 +159,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# LOGIN_URL = 'https://dallolbingohouse.com/account/login/'
-LOGIN_URL='account/login/'
+LOGIN_URL = 'https://dallolbingohouse.com/account/login/'
+# LOGIN_URL='account/login/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

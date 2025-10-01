@@ -186,6 +186,9 @@
                     <!-- <input class="input-date" type="text" name="datefilter" value="" placeholder="select date" autocomplete="off"/> -->
                     <input type="text" id="datepicker" name="datefilter" placeholder="select date" />
                     <input class="cutm-btn" type="submit" name="filter" value="Filter">
+                    {% if agents_accounts %}
+                        <button type="button" class="cutm-btn" id="openDepositBtn">Deposit</button>
+                    {% endif %}
                 </form>
             </div>
 
@@ -212,7 +215,6 @@
                     <h3>$ {% if filter %}{{admin_cut}}{% else %}{{acc.account}}{% endif %}</h3>
                     <p>
                         {% if filter %}Admin Cut{% else %}Avalible Balance{% endif %}
-                       <button type="button" class="cutm-btn" id="openDepositBtn">Deposit</button>
                     </p>
                 </span>
             </li>

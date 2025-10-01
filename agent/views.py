@@ -1402,6 +1402,8 @@ def shop_auto_deposit(request):
         verified_amount = Decimal(str(amount_value))
         if verified_amount <= 0:
             return JsonResponse({'error': 'Invalid amount: must be positive'}, status=400)
+        elif verified_amount < Decimal('1000'):
+            return JsonResponse({'error': 'Minimum deposit amount is 1000'}, status=400)
     except (ValueError, TypeError, Decimal.InvalidOperation):
         return JsonResponse({'error': 'Invalid amount format'}, status=500)
 

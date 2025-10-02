@@ -25,5 +25,6 @@ urlpatterns = [
     path('my-accounts/', views.list_my_accounts, name='list_my_accounts'),
     path('agent-accounts/', views.list_agent_accounts_for_shop, name='list_agent_accounts_for_shop'),
     path('shop-auto-deposit/', views.shop_auto_deposit, name='shop_auto_deposit'),
+    path('transactions/', views.get_agent_dashboard_transactions, name='agent_transactions'),
 
 ]

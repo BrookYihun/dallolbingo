@@ -1,7 +1,14 @@
 import json
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
+from django.db import connections
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+
+logger = logging.getLogger(__name__)
 import requests
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -1438,3 +1445,190 @@ def shop_auto_deposit(request):
         'amount': f'{verified_amount:.2f}',
         'transaction_id': transaction_id
     }, status=200)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_agent_dashboard_transactions(request):
+    """
+    Get transactions for shops managed by the logged-in agent.
+    Optionally filter by ?shop_id=xxx (must belong to agent).
+    Supports pagination and date filtering.
+    """
+    try:
+        # 🔹 Step 1: Get the agent
+        try:
+            agent = request.user.agent
+        except Agent.DoesNotExist:
+            return JsonResponse({"error": "No agent profile found."}, status=404)
+
+        # 🔹 Step 2: Optional shop_id filter
+        shop_id_str = request.GET.get('shop_id')
+        shop_id = None
+        if shop_id_str:
+            try:
+                shop_id = int(shop_id_str)
+                # Verify this shop belongs to the agent
+                if not ShopAccount.objects.filter(id=shop_id, agent=agent).exists():
+                    return JsonResponse({
+                        "error": "Shop not found or access denied."
+                    }, status=403)
+            except ValueError:
+                return JsonResponse({"error": "Invalid shop_id"}, status=400)
+
+        # 🔹 Step 3: Pagination
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 50))
+        if page < 1 or page_size < 1 or page_size > 1000:
+            return JsonResponse({"error": "Invalid pagination parameters."}, status=400)
+        offset = (page - 1) * page_size
+
+        # 🔹 Step 4: Date filtering
+        today = timezone.now().date()
+        from_date_str = request.GET.get('from_date')
+        to_date_str = request.GET.get('to_date')
+
+        if from_date_str:
+            try:
+                from_date = timezone.make_aware(timezone.datetime.strptime(from_date_str, '%Y-%m-%d'))
+            except ValueError:
+                return JsonResponse({"error": "Invalid from_date format. Use YYYY-MM-DD."}, status=400)
+        else:
+            from_date = timezone.now() - timedelta(days=30)
+
+        if to_date_str:
+            try:
+                to_date = timezone.make_aware(timezone.datetime.strptime(to_date_str, '%Y-%m-%d')) + timedelta(days=1)
+            except ValueError:
+                return JsonResponse({"error": "Invalid to_date format. Use YYYY-MM-DD."}, status=400)
+        else:
+            to_date = timezone.now()
+
+        # 🔹 Step 5: Build query dynamically
+        base_query = """
+            SELECT 
+                t.id,
+                t.amount,
+                t.created_at,
+                t.updated_at,
+                t.transaction_id,
+                t.transaction_type,
+                t.status,
+                aa.account_number AS agent_account_number,
+                aa.payment_method AS payment_method_code,
+                ag.name AS agent_name,
+                s.name AS shop_name,
+                s.phone_number AS shop_phone,
+                s.id AS shop_user_id
+            FROM transaction t
+            JOIN account_account s ON t.account_account_id = s.id
+            LEFT JOIN agent_accounts aa ON t.agent_account_id = aa.id
+            LEFT JOIN agent_agent ag ON aa.agent_id = ag.id
+            WHERE s.agent_id = %s
+              AND t.created_at >= %s
+              AND t.created_at < %s
+        """
+
+        count_query = """
+            SELECT COUNT(*) 
+            FROM transaction t
+            JOIN account_account s ON t.account_account_id = s.id
+            WHERE s.agent_id = %s
+              AND t.created_at >= %s
+              AND t.created_at < %s
+        """
+
+        params = [agent.id, from_date, to_date]
+
+        # Add shop filter if provided
+        if shop_id:
+            base_query += " AND s.id = %s"
+            count_query += " AND s.id = %s"
+            params.append(shop_id)
+
+        base_query += " ORDER BY t.created_at DESC LIMIT %s OFFSET %s"
+        params.extend([page_size, offset])
+
+        # 🔹 Step 6: Execute queries
+        with connections['default'].cursor() as cursor:
+            # Total count
+            cursor.execute(count_query, params[:-2])  # Exclude limit/offset
+            total_count = cursor.fetchone()[0]
+
+            if total_count == 0:
+                return JsonResponse({
+                    'data': [],
+                    'pagination': {
+                        'page': page,
+                        'page_size': page_size,
+                        'total_count': 0,
+                        'total_pages': 0,
+                        'has_next': False,
+                        'has_prev': False
+                    },
+                    'filters': {
+                        'agent_id': agent.id,
+                        'shop_id': shop_id,
+                        'from_date': from_date_str,
+                        'to_date': to_date_str
+                    }
+                })
+
+            # Fetch data
+            cursor.execute(base_query, params)
+            rows = []
+            for row in cursor.fetchall():
+                (
+                    id, amount, created_at, updated_at, transaction_id,
+                    transaction_type, status, agent_account_number,
+                    pm_code, agent_name, shop_name, shop_phone, shop_user_id
+                ) = row
+
+                # Convert choice fields
+                pm_label = dict(AgentAccount.PAYMENT_METHOD_CHOICES).get(pm_code, "Unknown") \
+                           if pm_code is not None else "N/A"
+
+                tt_label = dict(Transaction.TRANSACTION_TYPE_CHOICES).get(transaction_type, "Unknown") \
+                           if transaction_type is not None else "Unknown"
+
+                status_label = {0: "Pending", 1: "Success", 2: "Failed"}.get(status, "Unknown")
+
+                rows.append({
+                    "id": id,
+                    "amount": str(amount),
+                    "created_at": created_at.isoformat(),
+                    "updated_at": updated_at.isoformat() if updated_at else None,
+                    "transaction_id": transaction_id,
+                    "transaction_type": tt_label,
+                    "status": status_label,
+                    "agent_account_number": agent_account_number or "N/A",
+                    "payment_method": pm_label,
+                    "agent_name": agent_name or "No Agent",
+                    "shop_name": shop_name,
+                    "shop_phone": shop_phone,
+                    "shop_user_id": shop_user_id
+                })
+
+            total_pages = (total_count + page_size - 1) // page_size
+
+            return JsonResponse({
+                "data": rows,
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_count": total_count,
+                    "total_pages": total_pages,
+                    "has_next": page < total_pages,
+                    "has_prev": page > 1,
+                },
+                "filters": {
+                    "agent_id": agent.id,
+                    "shop_id": shop_id,
+                    "from_date": from_date_str,
+                    "to_date": to_date_str
+                }
+            })
+
+    except Exception as e:
+        logger.error(f"Error fetching agent transactions: {str(e)}", exc_info=True)
+        return JsonResponse({"error": "Failed to fetch transactions"}, status=500)

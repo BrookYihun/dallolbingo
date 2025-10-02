@@ -90,18 +90,27 @@ WSGI_APPLICATION = 'bingo.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-DATABASES = {
+DATABASES={
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'dallol_bingo_db',
         'USER': 'dallol',
         'PASSWORD': 'Byihun@123',
-        'HOST': 'localhost',  # Typically localhost for shared hosting
-        'PORT': '5432',           # Leave empty if default port 5432 is used
-        'CONN_MAX_AGE': 600,
-    }
+        'HOST': '49.13.146.224',
+        'PORT': '5432',
+    },
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'dallol_bingo_db',
+#         'USER': 'dallol',
+#         'PASSWORD': 'Byihun@123',
+#         'HOST': 'localhost',  # Typically localhost for shared hosting
+#         'PORT': '5432',           # Leave empty if default port 5432 is used
+#         'CONN_MAX_AGE': 600,
+#     }
+# }
 
 # DATABASES = {
 #     'default': {

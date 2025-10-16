@@ -24,6 +24,8 @@ let bonus_c = document.getElementById('bonus_animation');
 let bonus_t = document.getElementById('bonus_text');
 let free_c = document.getElementById('free_hit');
 let free_t = document.getElementById('free_hit_text');
+let jackpot_c = document.getElementById('jackpot');
+let jackpot_t = document.getElementById('jackpot_text');
 
 menuBar.addEventListener('click', function () {
 	sidebar.classList.toggle('hide');
@@ -503,9 +505,55 @@ console.log(patterns);
             }, 1000); 
         }
 
-        if(cardResult.bonus >0 && cardResult.free >0 && !cardResult.remaining_numbers){
-            bonus_c.style.left = '38%';
-            free_c.style.left = '62%';
+        if(cardResult.jackpot_won){
+            jackpot_c.style.display = "block";
+            jackpot_t.innerText = "$ "+ cardResult.jackpot_payout + " $";
+            let count = 0;
+            const intervalId = setInterval(() => {
+                launchConfetti();
+                count++;
+                if (count >= 3) {
+                    clearInterval(intervalId);
+                }
+            }, 1000);
+        }
+
+        // Make sure card is complete (no remaining numbers)
+        if (!cardResult.remaining_numbers) {
+
+            // All three occur
+            if (cardResult.bonus > 0 && cardResult.free > 0 && cardResult.jackpot_won) {
+                console.log("Bonus + Free + Jackpot");
+
+                // Example positions for 3 elements
+                bonus_c.style.left = '25%';
+                free_c.style.left = '50%';
+                jackpot_c.style.left = '75%';
+
+            } 
+            // Bonus + Free only
+            else if (cardResult.bonus > 0 && cardResult.free > 0) {
+                console.log("Bonus + Free");
+
+                bonus_c.style.left = '38%';
+                free_c.style.left = '62%';
+            } 
+            // Bonus + Jackpot only
+            else if (cardResult.bonus > 0 && cardResult.jackpot_won) {
+                console.log("Bonus + Jackpot");
+
+                bonus_c.style.left = '38%';
+                jackpot_c.style.left = '62%';
+
+            } 
+            // Free + Jackpot only
+            else if (cardResult.free > 0 && cardResult.jackpot_won) {
+                console.log("Free + Jackpot");
+
+                free_c.style.left = '38%';
+                jackpot_c.style.left = '62%';
+
+            }
         }
 
         // Handle Bingo message

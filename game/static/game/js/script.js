@@ -24,6 +24,8 @@ let bonus_c = document.getElementById('bonus_animation');
 let bonus_t = document.getElementById('bonus_text');
 let free_c = document.getElementById('free_hit');
 let free_t = document.getElementById('free_hit_text');
+let jackpot_c = document.getElementById('jackpot');
+let jackpot_t = document.getElementById('jackpot_text');
 
 menuBar.addEventListener('click', function () {
 	sidebar.classList.toggle('hide');
@@ -68,9 +70,12 @@ window.addEventListener('load', function() {
         }else if (cookieLanguage == "mm"){
         callerLanguageSelect.selectedIndex = 1;
         selectedLanguage = "mm";
-        }else{
+        }else if (cookieLanguage == "mm2"){
+        callerLanguageSelect.selectedIndex = 2;
+        selectedLanguage = "mm2";
+		}else{
         selectedLanguage = 0;
-        callerLanguageSelect.selectedIndex = 4;
+        callerLanguageSelect.selectedIndex = 5;
         }
     }
     var modeCookie = getCookie("mode");
@@ -142,12 +147,12 @@ function getLanguage(){
 
 callerLanguageSelect.addEventListener('change', function() {
     // Update the language for call-out-loud
-    selectedLanguage = callerLanguageSelect.value;
+    const selectedLanguage = callerLanguageSelect.value;
     deleteCookie("selectedLanguage");
-    setCookie("selectedLanguage",selectedLanguage,7);
-    // Pass the selected language to the speakNumber function
-    if(selectedNewLanguage!='am' || selectedNewLanguage!='mm'){
-      speech.voice = voices[0];
+    setCookie("selectedLanguage", selectedLanguage, 7);
+
+    if (!['am', 'mm', 'mm2'].includes(selectedLanguage)) {
+        speech.voice = voices[0];
     }
 });
 
@@ -216,6 +221,10 @@ function callNumber() {
         audio.play();
     }else if (selectedLanguage=='mm'){
         filePath = "/static/game/audio/male/"+selectedNumber+".mp3";
+        var audio = new Audio(filePath);
+        audio.play();
+    }else if (selectedLanguage=='mm2'){
+        filePath = "/static/game/audio/bingo/"+selectedNumber+".wav";
         var audio = new Audio(filePath);
         audio.play();
     }else{
@@ -298,7 +307,7 @@ startbtn.onclick = function(){
             filePath = "/static/game/audio/stop.mp3";
             var audio = new Audio(filePath);
             audio.play();
-        }else if (selectedLanguage=='mm'){
+        }else if (selectedLanguage === 'mm' || selectedLanguage === 'mm2') {
             filePath = "/static/game/audio/male/stop.mp3";
             var audio = new Audio(filePath);
             audio.play();
@@ -314,7 +323,7 @@ startbtn.onclick = function(){
             filePath = "/static/game/audio/start.mp3";
             var audio = new Audio(filePath);
             audio.play();
-        }else if (selectedLanguage=='mm'){
+        }else if (selectedLanguage === 'mm' || selectedLanguage === 'mm2') {
             filePath = "/static/game/audio/male/start.mp3";
             var audio = new Audio(filePath);
             audio.play();
@@ -496,9 +505,55 @@ console.log(patterns);
             }, 1000); 
         }
 
-        if(cardResult.bonus >0 && cardResult.free >0 && !cardResult.remaining_numbers){
-            bonus_c.style.left = '38%';
-            free_c.style.left = '62%';
+        if(cardResult.jackpot_won){
+            jackpot_c.style.display = "block";
+            jackpot_t.innerText = "$ "+ cardResult.jackpot_payout + " $";
+            let count = 0;
+            const intervalId = setInterval(() => {
+                launchConfetti();
+                count++;
+                if (count >= 3) {
+                    clearInterval(intervalId);
+                }
+            }, 1000);
+        }
+
+        // Make sure card is complete (no remaining numbers)
+        if (!cardResult.remaining_numbers) {
+
+            // All three occur
+            if (cardResult.bonus > 0 && cardResult.free > 0 && cardResult.jackpot_won) {
+                console.log("Bonus + Free + Jackpot");
+
+                // Example positions for 3 elements
+                bonus_c.style.left = '25%';
+                free_c.style.left = '50%';
+                jackpot_c.style.left = '75%';
+
+            } 
+            // Bonus + Free only
+            else if (cardResult.bonus > 0 && cardResult.free > 0) {
+                console.log("Bonus + Free");
+
+                bonus_c.style.left = '38%';
+                free_c.style.left = '62%';
+            } 
+            // Bonus + Jackpot only
+            else if (cardResult.bonus > 0 && cardResult.jackpot_won) {
+                console.log("Bonus + Jackpot");
+
+                bonus_c.style.left = '38%';
+                jackpot_c.style.left = '62%';
+
+            } 
+            // Free + Jackpot only
+            else if (cardResult.free > 0 && cardResult.jackpot_won) {
+                console.log("Free + Jackpot");
+
+                free_c.style.left = '38%';
+                jackpot_c.style.left = '62%';
+
+            }
         }
 
         // Handle Bingo message
@@ -585,7 +640,7 @@ console.log(patterns);
             filePath = "/static/game/audio/male/"+audiotxt+".mp3";
             var audio = new Audio(filePath);
             audio.play();
-        }else if (selectedLanguage=='mm'){
+        }else if (selectedLanguage === 'mm' || selectedLanguage === 'mm2') {
             filePath = "/static/game/audio/male/"+audiotxt+".mp3";
             var audio = new Audio(filePath);
             audio.play();
@@ -667,7 +722,7 @@ console.log(patterns);
             filePath = "/static/game/audio/male/nobingo.mp3";
             var audio = new Audio(filePath);
             audio.play();
-        }else if (selectedLanguage=='mm'){
+        }else if (selectedLanguage === 'mm' || selectedLanguage === 'mm2') {
             filePath = "/static/game/audio/male/nobingo.mp3";
             var audio = new Audio(filePath);
             audio.play();

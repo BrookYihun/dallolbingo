@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta, time
+import json
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from account.models import Account, UserGameCounter
+from account.models import Account, Profile, UserGameCounter
 from agent.models import Agent, AgentAccount
 from cashier.models import Cashier
 from game.models import CashierGame, UserGame
@@ -207,3 +209,24 @@ def setting_view(request):
     today_game_counter = UserGameCounter.objects.get(user=user)
     acc = Account.objects.get(user=user)
     return render(request,'account/setting.html',{"acc":acc,"cout":today_game_counter})
+
+
+@login_required
+def update_settings(request):
+    user = request.user  # Get the authenticated user
+    data = json.loads(request.body)  # Parse JSON data
+    display_info = data.get("display_info", True)
+    jackpot_percent = data.get("jackpot_percent", 0.00)
+    jackpot_amount = data.get("jackpot_amount", 0.00)
+    acc = Account.objects.get(user=user)
+    if acc:
+        acc.jackpot_percent = jackpot_percent
+        acc.jackpot_amount = jackpot_amount
+        acc.save()
+    # Ensure profile exists
+    profile, created = Profile.objects.get_or_create(user=user)
+
+    profile.display_info = display_info
+    profile.save()
+
+    return JsonResponse({"success": True, "message": "Settings saved successfully!"})

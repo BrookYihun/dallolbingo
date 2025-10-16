@@ -25,24 +25,9 @@ from cashier.models import Cashier
 @login_required
 def agent_index_view(request):
     agent = Agent.objects.get(user=request.user)
-    if agent:
-        agent_accounts=AgentAccount.objects.filter(
-            agent=agent,
-            is_active=True
-        ).order_by('payment_method')
-
-    agent_accounts_data = [
-        {
-            'id': agent_acc.id,
-            'account_number': agent_acc.account_number,
-            'payment_method_label': agent_acc.get_payment_method_display(),
-            'account_owner_name': agent_acc.account_owner_name,
-        }
-        for agent_acc in agent_accounts
-    ]
 
     if agent is not None:
-        return render(request,'agent/index.html',{'agent':agent, 'agent_accounts':agent_accounts_data})
+        return render(request,'agent/index.html',{'agent':agent})
 
     return redirect('index')
 
@@ -845,135 +830,86 @@ def get_shop_info(request):
 
     return redirect('index')
 
-
-VERIFIER_BASE = "http://88.99.189.198:8001/api/verify/"
-ENDPOINTS = {1: "verify-telebirr/", 2: "verify-cbe/", 3: "verify-boa/", 4: "verify-cbebirr/"}
-
-
 @csrf_exempt
 @login_required
 def add_balance(request):
     agent = Agent.objects.get(user=request.user)
-    if not agent:
-        return redirect('index')
 
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+    if agent is not None:
+        if request.method == 'GET':
+            try:
+                user_id = request.GET.get('id')
+                user = User.objects.get(id=int(user_id))
+                acc = Account.objects.get(user=user)
+                balance = request.GET.get('account')
+                amount = Decimal(balance)
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+                # Helper to create manual transaction
+                def log_manual_transaction():
+                    Transaction.objects.create(
+                        transaction_id=None,
+                        amount=amount,
+                        shop=acc,
+                        agent_account=None,
+                        transaction_type=1,  # Manual
+                    )
 
-    user_id = data.get('id')
-    amount_val = data.get('amount')
-    agent_account_id = data.get('account_type')  # if "manual" → offline/manual deposit
-    transaction_id = data.get('transaction_id')
+                # ✅ Special handling for "offline" agents
+                if "offline" in agent.user.username.lower():
+                    if agent.prepaid:
+                        if agent.account >= amount:
+                            # Create deposit and deduct from agent
+                            Deposit.objects.create(
+                                user=user,
+                                amount=amount,
+                                status=False
+                            )
+                            agent.account -= amount
+                            agent.save()
+                            log_manual_transaction()
+                            context = {'message': 'Deposit created (pending approval).'}
+                        else:
+                            context = {'message': 'Insufficient balance!!'}
+                    else:
+                        # Non-prepaid offline agent
+                        Deposit.objects.create(
+                            user=user,
+                            amount=amount,
+                            status=False
+                        )
+                        log_manual_transaction()
+                        context = {'message': 'Deposit created (pending approval).'}
 
-    if not user_id or not amount_val:
-        return JsonResponse({'error': 'Missing user ID or amount'}, status=400)
+                else:
+                    # Normal balance handling
+                    if agent.account >= amount and agent.prepaid:
+                        acc.account += amount
+                        agent.account -= amount
+                        agent.save()
+                        acc.save()
+                        log_manual_transaction()
+                        context = {'message': 'Successfully added balance to shop'}
+                    elif not agent.prepaid:
+                        acc.account += amount
+                        agent.account -= amount
+                        agent.save()
+                        acc.save()
+                        log_manual_transaction()
+                        context = {'message': 'Successfully added balance to shop'}
+                    else:
+                        context = {'message': 'Insufficient balance!!'}
 
-    try:
-        user = User.objects.get(id=int(user_id))
-        shop_acc = Account.objects.get(user=user)
-        amount = Decimal(str(amount_val))
-        if amount <= 0:
-            return JsonResponse({'error': 'Amount must be greater than 0'}, status=400)
-    except (User.DoesNotExist, Account.DoesNotExist, InvalidOperation):
-        return JsonResponse({'error': 'Invalid user or amount'}, status=400)
+                return JsonResponse(context)
 
-    # --- Offline / manual logic (keep as-is) ---
-    if agent_account_id == "manual" or "offline" in agent.user.username.lower():
-        # Prepaid agent
-        if agent.prepaid and agent.account < amount:
-            return JsonResponse({'error': 'Insufficient agent balance'}, status=400)
+            except ValueError:
+                context = {'message': 'Error has Happened'}
+                return JsonResponse(context)
 
-        if agent.prepaid:
-            agent.account -= amount
-            agent.save()
+        return redirect('agent_index')
 
-        Deposit.objects.create(user=user, amount=amount, status=False)
-        Transaction.objects.create(
-            transaction_id=None,
-            amount=amount,
-            shop=shop_acc,
-            agent_account=None,
-            transaction_type=1,  # manual
-            status=0  # pending
-        )
-        return JsonResponse({'message': 'Deposit created (pending approval)',
-                             'new_balance': f'{shop_acc.account:.2f}'})
+    return redirect('index')
 
-    # --- Automatic verification logic ---
-    if agent_account_id and agent_account_id != "manual":
-        try:
-            agent_acc = AgentAccount.objects.get(id=int(agent_account_id), is_active=True)
-        except AgentAccount.DoesNotExist:
-            return JsonResponse({'error': 'Selected agent account not found or inactive'}, status=404)
 
-        if not transaction_id:
-            return JsonResponse({'error': 'Transaction ID is required for this account type'}, status=400)
-
-        # Build payload like shop_auto_deposit
-        try:
-            payment_method = int(agent_acc.payment_method)
-        except (TypeError, ValueError):
-            return JsonResponse({'error': 'Invalid payment method'}, status=500)
-
-        if payment_method not in ENDPOINTS:
-            return JsonResponse({'error': 'Unsupported payment method'}, status=400)
-
-        api_url = f"{VERIFIER_BASE}{ENDPOINTS[payment_method]}"
-        payload = {}
-        if payment_method == 1:  # TeleBirr
-            payload["receipt_no"] = transaction_id
-        elif payment_method == 2:  # CBE
-            payload["transaction_id"] = transaction_id
-            payload["account_number"] = agent_acc.account_number or str(agent_acc.id)
-        elif payment_method == 3:  # BOA
-            payload["transaction_id"] = transaction_id
-        elif payment_method == 4:  # CBE_BIRR
-            payload["transaction_id"] = transaction_id
-            payload["phone"] = agent_acc.account_number or str(agent_acc.id)
-
-        try:
-            resp = requests.post(api_url, json=payload, timeout=15)
-            resp.raise_for_status()
-            resp_json = resp.json()
-        except Exception as e:
-            return JsonResponse({'error': f'Verification failed: {str(e)}'}, status=500)
-
-        if resp_json.get("status") != "success":
-            return JsonResponse({'error': resp_json.get("detail", "Transaction could not be verified")}, status=400)
-
-        verified_amount = Decimal(str(resp_json.get("data", {}).get("amount", 0)))
-        if verified_amount < amount:
-            return JsonResponse({'error': 'Verified transaction amount is less than requested amount'}, status=400)
-
-        # Deduct from agent if prepaid
-        if agent_acc.agent.prepaid:
-            if agent_acc.agent.account < verified_amount:
-                return JsonResponse({'error': 'Agent does not have enough balance'}, status=400)
-            agent_acc.agent.account -= verified_amount
-            agent_acc.agent.save()
-
-        # Credit shop
-        shop_acc.account += verified_amount
-        shop_acc.save()
-
-        Transaction.objects.create(
-            transaction_id=transaction_id,
-            amount=verified_amount,
-            shop=shop_acc,
-            agent_account=agent_acc,
-            transaction_type=0,  # automatic
-            status=1
-        )
-
-        return JsonResponse({'message': 'Deposit verified and added to shop',
-                             'new_balance': f'{shop_acc.account:.2f}'})
-
-    return JsonResponse({'error': 'Invalid request'}, status=400)
 
 @csrf_exempt
 @login_required
@@ -1481,32 +1417,10 @@ def shop_auto_deposit(request):
             }, status=400)
 
     # ✅ All checks passed — update shop balance + save transaction
-    # ✅ All checks passed — update balances + save transaction
     try:
-        if agent_account.agent.prepaid:
-            # Prepaid → deduct from agent and add to shop
-            if agent_account.agent.account < verified_amount:
-                return JsonResponse({
-                    'error': 'Agent does not have enough balance to cover this transaction.'
-                }, status=400)
+        shop.account += verified_amount
+        shop.save()
 
-            agent_account.agent.account -= verified_amount
-            agent_account.agent.save()
-
-            shop.account += verified_amount
-            shop.save()
-
-        else:
-            # Not prepaid → just deduct from agent (no shop credit)
-            if agent_account.agent.account < verified_amount:
-                return JsonResponse({
-                    'error': 'Agent does not have enough balance to cover this transaction.'
-                }, status=400)
-
-            agent_account.agent.account -= verified_amount
-            agent_account.agent.save()
-
-        # Save transaction record
         Transaction.objects.create(
             transaction_id=transaction_id,
             amount=verified_amount,
@@ -1515,14 +1429,12 @@ def shop_auto_deposit(request):
             transaction_type=0,  # Automatic
             status=1  # Success
         )
-
     except Exception as e:
         return JsonResponse({'error': f'Failed to record transaction: {str(e)}'}, status=500)
 
     return JsonResponse({
         'message': 'Deposit verified successfully.',
         'new_balance': f'{shop.account:.2f}',
-        'agent_balance': f'{agent_account.agent.account:.2f}',
         'amount': f'{verified_amount:.2f}',
         'transaction_id': transaction_id
     }, status=200)

@@ -139,16 +139,16 @@ def new_game_view(request):
                 game.winner_price =  winner - game.shop_cut
                 game.admin_cut = (float(winner) * float(cut_per)) * float(acc.percentage)
                 
-                #ACKPOT: DEDUCT FROM WINNER PRICE & ADD TO POOL
-                if acc.jackpot_percent>0 and acc.jackpot_amount>0:
-                    original_winner_price=Decimal(str(game.winner_price))
-                    jackpot_contribution= original_winner_price*(acc.jackpot_percent/Decimal('100'))
+                # #ACKPOT: DEDUCT FROM WINNER PRICE & ADD TO POOL
+                # if acc.jackpot_percent>0 and acc.jackpot_amount>0:
+                #     original_winner_price=Decimal(str(game.winner_price))
+                #     jackpot_contribution= original_winner_price*(acc.jackpot_percent/Decimal('100'))
 
-                    if jackpot_contribution>original_winner_price:
-                        jackpot_contribution= original_winner_price
+                #     if jackpot_contribution>original_winner_price:
+                #         jackpot_contribution= original_winner_price
 
-                    game.winner_price=float(original_winner_price-jackpot_contribution)
-                    acc.jackpot_balance+=jackpot_contribution
+                #     game.winner_price=float(original_winner_price-jackpot_contribution)
+                #     acc.jackpot_balance+=jackpot_contribution
 
             else:
                 game.shop_cut = 0
@@ -362,20 +362,20 @@ def check_winner_view(request):
                 #         cashier.decrement_balance(game.stake)
                 game.save()
 
-            jackpot_won=False
-            jackpot_payout=Decimal('0.00')
+            # jackpot_won=False
+            # jackpot_payout=Decimal('0.00')
 
-            try:
-                shop_account=Account.objects.get(user=request.user)
-                if shop_account.jackpot_balance >= shop_account.jackpot_amount > 0 and not remaining_number:
-                    jackpot_won=True
-                    jackpot_payout= shop_account.jackpot_amount
-                    shop_account.jackpot_balance-= jackpot_payout
-                    shop_account.save()
-            except Account.DoesNotExist:
-                pass
+            # try:
+            #     shop_account=Account.objects.get(user=request.user)
+            #     if shop_account.jackpot_balance >= shop_account.jackpot_amount > 0 and not remaining_number:
+            #         jackpot_won=True
+            #         jackpot_payout= shop_account.jackpot_amount
+            #         shop_account.jackpot_balance-= jackpot_payout
+            #         shop_account.save()
+            # except Account.DoesNotExist:
+            #     pass
 
-            result.append({'card_name': card.id, 'message': 'Bingo','free':game.free_hit, 'bonus':game.bonus_payed, 'winning_card': numbers, 'remaining_numbers': remaining_number,'called_numbers': called_numbers,'winning_numbers':winning_numbers,'card':numbers,'jackpot_won':jackpot_won,'jackpot_payout':float(jackpot_payout)})
+            result.append({'card_name': card.id, 'message': 'Bingo','free':game.free_hit, 'bonus':game.bonus_payed, 'winning_card': numbers, 'remaining_numbers': remaining_number,'called_numbers': called_numbers,'winning_numbers':winning_numbers,'card':numbers})
             
         else:
             result.append({'card_name': card.id, 'message': 'No Bingo','card':numbers})

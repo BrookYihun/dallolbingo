@@ -20,6 +20,25 @@ class Account(models.Model):
     cut_bouldery = models.IntegerField(default=100)
     backup_password = models.CharField(max_length=255,default="")
     agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, related_name='agent', default=None)
+    jackpot_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        help_text="Percentage of each prize to contribute to jackpot (e.g., 2.00 for 2%)"
+    )
+    jackpot_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0.00,
+        help_text="Jackpot threshold amount (in birr) to trigger payout"
+    )
+    jackpot_balance = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        default=0.00,
+        help_text="Current accumulated jackpot pool"
+    )
+
 
     def __str__(self):
         return self.name
@@ -50,3 +69,23 @@ class Deposit(models.Model):
 
     def __str__(self):
         return f"Deposit {self.id} - {self.user.username} - {self.amount} ({'Done' if self.status else 'Pending'})"
+
+
+class Profile(models.Model):
+    CARTELA_CHOICES = [
+        ("super", "Super"),
+        ("dallol", "Dallol"),
+        ("africa", "Africa"),
+        ("hummer", "Hummer"),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    display_info = models.BooleanField(default=True)  # Stores display toggle state
+    cartela = models.CharField(
+        max_length=20,
+        choices=CARTELA_CHOICES,
+        default="dallol",  # You can change the default if needed
+    )
+
+    def __str__(self):
+        return f"{self.user.username} Profile"

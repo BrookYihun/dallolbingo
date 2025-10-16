@@ -72,6 +72,15 @@
                       <span class="c-grey">Today Game:</span>
                       <span>{{cout.game_counter}}</span>
                     </div>
+                    <div class="fs-14">
+                      <span class="c-grey">Jackpot Percentage:</span>
+                      <input id="jackpot_percent" type="number" name="jackpot_percent" value="{{ acc.jackpot_percent }}" step="1" min="0" max="100" class="editable-input"> %
+                    </div>
+
+                    <div class="fs-14">
+                      <span class="c-grey">Jackpot Amount:</span>
+                      <input id="jackpot_amount" type="number" name="jackpot_amount" value="{{ acc.jackpot_amount }}" step="1" min="0" class="editable-input">
+                    </div>
                   </div>
                   <!------------------------------>
                   <!------------------------------>
@@ -79,20 +88,19 @@
                     <h4 class="c-grey fs-15 m-0 w-full">Game Information</h4>
                     <div class="fs-14">
                       <span class="c-grey">Display Game Information:</span>
-                      <span>ON</span>
+                      <span id="display_text">{% if profile.display_info %}ON{%else%}OFF{% endif %}</span>
                     </div>
                     <div class="fs-14">
                       <label>
-                        <input class="toggle-checkbox" type="checkbox" checked>
+                        <input class="toggle-checkbox" type="checkbox" id="display_checkbox" {% if profile.display_info %}checked{% endif %}>
                         <div class="toggle-switch relative"></div>
                       </label>
                     </div>
-                  </div>
                 </div>
               </div>
+              <button type="submit" id="start-button">Save</button>
             </div>
         </div>
-    
     </main>
 </section>
 

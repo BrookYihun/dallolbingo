@@ -617,6 +617,7 @@ console.log(patterns);
             // Functionality to close the container
             bonus_c.style.display = "none";
             free_c.style.display = "none";
+            jackpot_c.style.display = "none";
             while (resultContainer.firstChild) {
                 resultContainer.removeChild(resultContainer.firstChild);
             }

@@ -7,5 +7,5 @@ urlpatterns = [
     path('logout/',views.logout_view,name="logout"),
     path('dashboard/',views.dashboard_view,name="dashboard"),
     path('setting/',views.setting_view,name="setting"),
-    # path('save-game-settings/',views.update_settings,name="update_settings"),
+    path('save-game-settings/',views.update_settings,name="update_settings"),
 ]

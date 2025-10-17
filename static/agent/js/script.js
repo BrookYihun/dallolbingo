@@ -250,7 +250,7 @@ function add_balance(id){
             blur_bg.style.display = 'block';
             add_balance_form.style.display ='block';
 
-            document.getElementById('add-balance-name').value = response.name;
+            document.getElementById('add-balance-name').value = response.user_name;
             document.getElementById('add-balance-id').value = id;
 
         },
@@ -263,21 +263,22 @@ function add_balance(id){
 
 add_balance_btn.onclick = function(){
     var form = document.getElementById('add-balance-form');
+    event.preventDefault();
     let isFormValid = true;
+
+    // Validate required fields
     form.querySelectorAll('input, select, textarea').forEach(function(field) {
-        if (!field.value.trim()) {
+        if (field.required && !field.value.trim()) {
             isFormValid = false;
-            // Optionally, you can add some visual feedback for the user
-            field.classList.add('error'); // Add error class to empty fields
+            field.classList.add('error');
         } else {
-            field.classList.remove('error'); // Remove error class if field has value
+            field.classList.remove('error');
         }
     });
 
     if (!isFormValid) {
-        // Optionally, you can display an error message to the user
-        alert('Please fill in all fields.');
-        return; // Exit function if any field is empty
+        alert('Please fill in all required fields.');
+        return;
     }
 
     let serializedData = {};
@@ -287,22 +288,24 @@ add_balance_btn.onclick = function(){
     }
 
     add_loader();
+
     $.ajax({
-        url:  "add_balance/",  // Replace with your Django view URL
-        type: "GET",
-        data: serializedData,
-            // Add more parameters as needed
+        url: "add_balance/",
+        type: "POST",
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        contentType: "application/json",
+        data: JSON.stringify(serializedData),
         success: function(response) {
-            // Disable buttons based on the received list of selected numbers
             blur_bg.style.display = 'none';
             add_balance_form.style.display = 'none';
-            var result = response.message;
-            alert(result);
+            alert(response.message);
             get_shop_stat();
             updateTable();
             remove_loader();
         },
         error: function(xhr, status, error) {
+            alert(xhr.responseJSON?.error || "Failed to add balance");
+            remove_loader();
             console.error("Failed to add Balance", error);
         }
     });

@@ -148,20 +148,39 @@
                 <form id="add-balance-form">
                     {% csrf_token %}
                     <div class="form-group">
+                        <label for="account_type">Account Type:</label>
+                        <select id="account-type" name="account_type" required>
+                            <option value="" disabled selected>Select Account Type</option>
+                            {% for acc in agent_accounts %}
+                            <option value="{{ acc.id }}">
+                                {{ acc.payment_method_label }} - {{ acc.account_number }}
+                            </option>
+                            {% endfor %}
+                            <option value="manual">Manual / Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="name">Name:</label>
                         <input type="text" name="id" id="add-balance-id" hidden>
                         <input id="add-balance-name" type="text" name="name" readonly>
+
                     </div>
                     <div class="form-group">
-                        <label for="account">Balance:</label>
-                        <input type="number" name="account" required>
+                        <label for="transaction_id">Transaction ID:</label>
+                        <input type="text" name="transaction_id" id="transaction-id" placeholder="Enter Transaction ID">
                     </div>
-                </form>
-                <div>
+                    <div class="form-group">
+                        <label for="amount">Amount:</label>
+                        <input type="number" name="amount" id="amount" required>
+                    </div>
+                    <div>
                     <button id="close-add-balance" class="form-btn">Close</button>
                     <button id="add-balance-submit" class="form-btn">Add</button>
                 </div>
+
+                </form>
             </div>
+
         </div>
     </div>
     <div class="loader-container" id="loader">
@@ -176,6 +195,20 @@
         singleDate: false,
         format: 'MM/DD/YYYY',
     });
+    const accountTypeSelect = document.getElementById("account-type");
+    const transactionInput = document.getElementById("transaction-id");
+
+    accountTypeSelect.addEventListener("change", function() {
+        if(this.value === "manual") {
+            transactionInput.value = "";
+            transactionInput.required = false;
+            transactionInput.placeholder = "Transaction ID not required for manual deposits";
+        } else {
+            transactionInput.required = true;
+            transactionInput.placeholder = "Enter Transaction ID";
+        }
+    });
+
 </script>
   </body>
 </html>

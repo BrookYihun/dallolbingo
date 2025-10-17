@@ -97,11 +97,35 @@
                       </label>
                     </div>
                 </div>
+                <button type="submit" id="start-button" class="save-btn">Save</button>
               </div>
-              <button type="submit" id="start-button">Save</button>
             </div>
         </div>
     </main>
 </section>
+
+
+<style>
+  .editable-input {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 5px 8px;
+    margin-left: 6px;
+    width: 100px;
+    font-family: 'Ubuntu', sans-serif;
+  }
+  .save-btn {
+    background: linear-gradient(90deg, #03c0ff, #ff8d50);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 600;
+    padding: 8px 20px;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .save-btn:hover { opacity: 0.8; }
+</style>
 
 {% endblock %}

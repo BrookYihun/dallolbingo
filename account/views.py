@@ -25,7 +25,7 @@ def login_view(request):
             if not user.is_active:
                 acc = Account.objects.get(user=user)
                 if acc.agent and acc.agent.id == 3:
-                    error_message = "Your account is inactive. Please call 0944 42 42 52."
+                    error_message = "Your account is inactive. Please call ‪0909 18 27 27‬."
                 else:
                     error_message = "Your account is inactive. Please call 0911 95 99 68."
             else:

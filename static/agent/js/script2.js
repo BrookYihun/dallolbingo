@@ -1,3 +1,5 @@
+currentPage = 0;
+allRows = [];
 document.addEventListener("DOMContentLoaded", function () {
     
     add_loader();
@@ -27,9 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 var hiddenData = document.querySelector("#hiddenData tbody").innerHTML;
 const rowsPerPage = 20;
-let currentPage = 0;
 let dataRows;
-let allRows = [];
 
 function updateTable() {
 
@@ -131,11 +131,11 @@ function get_agent_stat(){
         type: "GET",
             // Add more parameters as needed
         success: function(response) {
-            // Disable buttons based on the received list of selected numbers
-            renderShopsStats(response);
-            updateTable();
+            alert(response.message);
+            currentPage = 0;
+            allRows = [];
+            get_agent_stat();
             remove_loader();
-
         },
         error: function(xhr, status, error) {
             console.error("Failed to get shops", error);

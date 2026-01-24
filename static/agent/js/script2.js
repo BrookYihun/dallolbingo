@@ -191,8 +191,6 @@ function renderShopsStats(data) {
         tableBody.insertAdjacentHTML('beforeend', html);
         allRows.push(shopStat);
     });
-    
-    updateTable(); 
 
 }
 

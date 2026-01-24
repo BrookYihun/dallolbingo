@@ -28,8 +28,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 var hiddenData = document.querySelector("#hiddenData tbody").innerHTML;
 const rowsPerPage = 20;
-let dataRows;
 let currentPage = 0;
+let dataRows;
 let allRows = [];
 
 function updateTable() {
@@ -132,9 +132,11 @@ function get_agent_stat(){
         type: "GET",
             // Add more parameters as needed
         success: function(response) {
-            renderShopsStats (response);
+            // Disable buttons based on the received list of selected numbers
+            renderShopsStats(response);
             updateTable();
             remove_loader();
+
         },
         error: function(xhr, status, error) {
             console.error("Failed to get shops", error);
@@ -193,7 +195,7 @@ function renderShopsStats(data) {
         allRows.push(shopStat);
     });
     
-    updateTable(); 
+    updateTable();
 
 }
 

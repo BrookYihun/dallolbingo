@@ -132,10 +132,9 @@ function get_agent_stat(){
             // Add more parameters as needed
         success: function(response) {
             alert(response.message);
-            renderShopsStats (response);
-            updateTable();
             currentPage = 0;
             allRows = [];
+            get_agent_stat();
             remove_loader();
         },
         error: function(xhr, status, error) {

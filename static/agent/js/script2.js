@@ -1,4 +1,5 @@
-
+let currentPage = 0;
+let allRows = [];
 document.addEventListener("DOMContentLoaded", function () {
     
     add_loader();
@@ -29,8 +30,6 @@ document.addEventListener("DOMContentLoaded", function () {
 var hiddenData = document.querySelector("#hiddenData tbody").innerHTML;
 const rowsPerPage = 20;
 let dataRows;
-let currentPage = 0;
-let allRows = [];
 
 function updateTable() {
 

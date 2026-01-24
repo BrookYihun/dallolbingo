@@ -1,5 +1,5 @@
-let currentPage = 0;
-let allRows = [];
+currentPage = 0;
+allRows = [];
 document.addEventListener("DOMContentLoaded", function () {
     
     add_loader();

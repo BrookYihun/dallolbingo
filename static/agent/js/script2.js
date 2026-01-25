@@ -189,6 +189,7 @@ function renderShopsStats(data) {
 
     // Generate HTML for each user statistic and append it to the table
     data.agents_stat.forEach(function(shopStat) {
+        console.log(shopStat);
         const html = generateShopStatHTML(shopStat);
         tableBody.insertAdjacentHTML('beforeend', html);
         allRows.push(shopStat);
